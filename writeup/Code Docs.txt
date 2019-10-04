@@ -1,0 +1,6 @@
+"2D SAFT" refers to 2D B-scans with the SAFT algorithm performed for 2 directional variables: x,y.
+Arrays are formatted as (time, y, x). B-scans are created using `scanning.py` with the DIMENSIONS=(y, x)
+and reconstructed using `analysis_2d_saft.py`.
+
+2D-3FOC5in [14000, 12, :]
+

@@ -1,0 +1,5 @@
+1D-3FOC5in-SAFT-40um       -- z 16000 to 20000  -
+1D-3FOC5in-SAFT-80um       -- z 16000 to 20000  -
+1D-3FOC5in-SAFT-120um      -- z 16000 to 20000  -
+1D-3FOC5in-SAFT-20um-pipe  -- z 15000 to 17500  -
+1D-3FOC5in-SAFT-40um-pipe  -- z 15000 to 17500  -
