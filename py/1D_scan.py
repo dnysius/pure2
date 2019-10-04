@@ -7,9 +7,9 @@ from os import getcwd
 from os.path import join, dirname
 from matplotlib.ticker import FixedFormatter
 global min_step, FILENAME
-FOLDER_NAME = "1D-3FOC3in-back-1in"  # edit this
+FOLDER_NAME = "1D-3FOC50cm-60um"  # edit this
 FILENAME = "varr.pkl"  # and this
-min_step = 4e-4  # and this
+min_step = 6e-4  # and this
 
 if FOLDER_NAME[:2] == "2D":
     par = "2D SCANS"
@@ -19,6 +19,7 @@ else:
     par = "ANGLE DEPENDENCE"
 BSCAN_FOLDER = join(dirname(getcwd()), "scans", "BSCAN")
 SCAN_FOLDER = join(dirname(getcwd()), "data", par, FOLDER_NAME)
+SCAN_FOLDER = join("C:\\Users\\dionysius\\Documents\\pure repo\\data", par, FOLDER_NAME)
 
 
 def load_arr(output_folder=SCAN_FOLDER):
@@ -118,10 +119,11 @@ def reg_plot(b):
 
 if __name__ == '__main__':
     tarr, varr = load_arr(SCAN_FOLDER)
+    timestep = np.mean(tarr[1:, :, :] - tarr[:-1, :, :])  # get avg timestep
     if FILENAME == 'varr.pkl':
         varr = varr[:, 0, :]
-    reg_plot(varr)
-#        ibscan(tarr, varr[12000:, :])
-    abs_max = np.max(np.abs(varr.flatten()))
-    ibscan(tarr, varr, start=0, end=-1)
+    reg_plot(varr[31500:(31500+934), :])
+#    ibscan(tarr, varr[12000:, :])
+#    abs_max = np.max(np.abs(varr.flatten()))
+#    ibscan(tarr, varr, start=0, end=-1)
 #    reg_plot(varr[27000:,0,:])

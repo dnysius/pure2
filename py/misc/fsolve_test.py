@@ -8,25 +8,27 @@ from numpy import \
 from os import getcwd
 from os.path import join, dirname
 from scipy.signal import hilbert
-from time import perf_counter_ns
 import scipy.optimize as so
 import pickle
 import matplotlib.pyplot as plt
 global min_step, Cw, Cm, a, DEFAULT_ARR_FOLDER, d1
-global lat_distance, FD, lenT, T, V, L, POST, lat_index
-################################################################
-FOLDER_NAME = "1D-3FOC50cm-60um"
-directory_path = "C:\\Users\\dionysius\\Documents\\pure repo\\data\\1D SCANS"
-min_step = 4e-4
-FOCAL_DEPTH = 0.0381*2
-SAMPLE_START = 31500
-SAMPLE_THICKNESS = .014
-################################################################
-Cw = 1498  # speed of sound in (w)ater
-Cm = 6320  # speed of sound in (m)etal
+global lat_distance, FD, lenT, T, V, L, POST, lat_indices
+FOLDER_NAME = "1D-3FOC50cm-60um"  # edit this
+min_step = 4e-4  # and this
+FOCAL_DEPTH = 0.0381*2  # and this
+Cw = 1498  # speed of sound in water
+Cm = 6320  # speed of sound in metal
 a = Cm/Cw  # ratio between two speeds of sound
-#DEFAULT_ARR_FOLDER = join(dirname(getcwd()), "data", "1D SCANS", FOLDER_NAME)
-DEFAULT_ARR_FOLDER = join(directory_path, FOLDER_NAME)
+d1 = .5  # in m, metal sample distance to the transducer
+d1 = 31500*2.0000000000000315e-08*Cw/2
+SAMPLE_DEPTH = d1
+SAMPLE_THICKNESS = .012
+if FOLDER_NAME[:2] == "1D":
+    par = "1D SCANS"
+else:
+    par = "2D SCANS"
+DEFAULT_ARR_FOLDER = join(dirname(getcwd()), "data", par, FOLDER_NAME)
+DEFAULT_ARR_FOLDER = join("C:\\Users\\dionysius\\Documents\\pure repo\\data", par, FOLDER_NAME)
 
 
 def load_arr(output_folder=DEFAULT_ARR_FOLDER):
@@ -60,8 +62,8 @@ def df(z, aa, d2):
 
 def newton(deltax, d2):
     accuracy = 1e-9
-    error = 1.
-    x1 = np.zeros(len(deltax))
+    error = np.zeros(len(deltax))
+    x1 = 0
     # newton's method
     while error > accuracy:
         x1, x0 = x1 - f(x1, deltax, d2)/df(x1, deltax, d2), x1
@@ -69,45 +71,63 @@ def newton(deltax, d2):
     return x1
 
 
-# set up the data
 tarr, varr = load_arr()
 tarr = tarr[:, 0, :]
 varr = varr[:, 0, :]
 ZERO = find_nearest(tarr[:, 0], 0)
 T = tarr[ZERO:, 0]  # 1D, time columns all the same
-varr = varr[ZERO:, :]
-tstep = np.mean(T[1:]-T[:-1])  # average timestep
-# refraction algorithm
-d1 = T[SAMPLE_START]*Cw/2  # distance
-d2_start = SAMPLE_START  # index
-d2_end = find_nearest(T, 2*(d1+SAMPLE_THICKNESS)/Cw)  # index
-d2 = T[d2_start:d2_end]*Cw/2
-V = varr[:, :]  # 2D
-L = np.shape(V)[1]  # number of transducer positions
-lat_distance = np.linspace(-L/2, L/2, L)*min_step
-lat_index = np.arange(0, L, 1)
+V = varr[ZERO:, :]  # 2D
+FD = find_nearest(T, 2*FOCAL_DEPTH/Cw)  # focal depth
 lenT = len(T)
-lend2 = d2_end-d2_start
-POST = np.empty((lend2, L))  # final image array
-
-
-def main(lat_pix):  # lat_pix is imaging x coord
-    j = 0  # imaging pixel for time/ z direction
-    while j < lend2:
-        aa = lat_distance[lat_pix] - lat_distance[:]
+POST = np.empty(np.shape(V[d1:lenT, :]))
+T = T[d1:lenT]
+L = np.shape(V)[1]
+tstep = np.mean(T[1:]-T[:-1])  # average timestep
+#d2_start = find_nearest(T, 2*d1/Cw)
+d2_start = d1
+d2_end = find_nearest(T, 2*(d1+SAMPLE_THICKNESS)/Cw)
+d2 = T[d2_start:d2_end]*Cw/2
+lend2 = len(d2)
+lat_distance = np.linspace(-L/2, L/2, L)*min_step
+lat_indices = np.arange(0, L, 1)
+zw = np.empty((lend2, L))  # y, x
+#k_axis = np.empty(L)  # z
+for i in range(L):
+    for j in range(len(d2)):
+        aa = lat_distance[i] - lat_distance[:]
         zw = newton(aa, d2[j])  # sin(theta_1)
         zm = zw*a  # find sin(theta_2)
         radM = np.arcsin(zm)  # theta_2
         radW = np.arcsin(zw)  # theta_1
-        delay_t = (2/Cw)*(d1/np.cos(radW) + d2[j]/np.cos(radM))
+        td_water = d1/np.cos(radW)  # real traveling distance inside water
+        td_metal = d2[j]/np.cos(radM)  # traveling distance in metal
+        total_td = td_water + td_metal  # real traveling distance
+        delay_t = np.round((2/Cw)*total_td/tstep).astype(int)
+
+
+def main(lat_pixel):  # lat_pixel is imaging x coord
+    x = lat_distance[lat_pixel]  # x is imaging distance
+    ti = d2_start  # imaging pixel for time/ z direction
+    while ti <= d2_end:
+        if ti >= d2_start and ti <= d2_end:
+            aa = lat_distance[i] - lat_distance[:]
+            zw = newton(aa, d2[j])  # sin(theta_1)
+            zm = zw*a  # find sin(theta_2)
+            radM = np.arcsin(zm)  # theta_2
+            radW = np.arcsin(zw)  # theta_1
+            delay_t = (2/Cw)*(d1/np.cos(radW) + d2[j]/np.cos(radM))  # real traveling distance
+#        else:
+#            z = T[ti]*Cw/2
+#            z2 = np_power(z, 2)
+#            delay_t = (2/Cw)*np_sqrt(np_power(x-lat_distance[lat_indices], 2)
+#                                     + z2)
         zi = np.round(delay_t/tstep).astype(int)
-        POST[j, lat_pix] = np_sum(V[zi[zi < lenT], lat_index[zi < lenT]])
-        j += 1
+        POST[ti-FD, lat_pixel] = np_sum(V[zi[zi < lenT], lat_indices[zi < lenT]])
+        ti += 1
 
 
-if __name__ == '__main__':
+if __name__ != '__main__':
     # Parallel processing
-    start_time = perf_counter_ns()*1e-9
     jobs = []
     print("Append")
     for i in range(L):
@@ -120,14 +140,13 @@ if __name__ == '__main__':
         job.join()
     print("Stitching")
     b = np.abs(hilbert(POST[:, :], axis=0))
-#    pickle.dump(b, open(join(DEFAULT_ARR_FOLDER, "refraction-SAFT-{}.pkl"
-#                             .format(FOLDER_NAME)), "wb"))
-#    pickle.dump(T, open(join(DEFAULT_ARR_FOLDER, "refraction-SAFT-T-{}.pkl"), "wb"))
-    duration = perf_counter_ns()*1e-9-start_time
-    print(duration)
+#    b = 20*np.log10(b/np.max(b.flatten()))  # dont do this part
+    pickle.dump(b, open(join(DEFAULT_ARR_FOLDER, "SAFT-{}.pkl"
+                             .format(FOLDER_NAME)), "wb"))
+    pickle.dump(T, open(join(DEFAULT_ARR_FOLDER, "SAFT-T-{}.pkl"), "wb"))
 
 #fig = plt.figure(figsize=[10, 10])
-#plt.imshow(POST[:, :], aspect='auto', cmap='gray')
+#plt.imshow(STITCHED[:, :], aspect='auto', cmap='hot')
 #plt.colorbar()
 #plt.show()
 
