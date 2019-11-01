@@ -7,9 +7,10 @@ from os import getcwd
 from os.path import join, dirname
 from matplotlib.ticker import FixedFormatter
 global min_step, FILENAME
-FOLDER_NAME = "1D-3FOC50cm-60um"  # edit this
+FOLDER_NAME = "1D-3FOC5in"  # edit this
 FILENAME = "varr.pkl"  # and this
-min_step = 6e-4  # and this
+FILENAME = "SAFT-1D-3FOC5in.pkl"
+min_step = 4e-4  # and this
 
 if FOLDER_NAME[:2] == "2D":
     par = "2D SCANS"
@@ -117,12 +118,15 @@ def reg_plot(b):
     plt.colorbar()
     plt.show()
 
+
 if __name__ == '__main__':
     tarr, varr = load_arr(SCAN_FOLDER)
     timestep = np.mean(tarr[1:, :, :] - tarr[:-1, :, :])  # get avg timestep
     if FILENAME == 'varr.pkl':
         varr = varr[:, 0, :]
-    reg_plot(varr[31500:(31500+934), :])
+#    reg_plot(varr)
+#    reg_plot(varr[31500:(31500+934), :])
+    reg_plot(varr[15750:17750, 50:150])
 #    ibscan(tarr, varr[12000:, :])
 #    abs_max = np.max(np.abs(varr.flatten()))
 #    ibscan(tarr, varr, start=0, end=-1)

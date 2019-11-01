@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import threading
-from numpy import \
-    power as np_power, \
-    sqrt as np_sqrt, \
-    sum as np_sum
 from os import getcwd
 from os.path import join, dirname
 from scipy.signal import hilbert
 from time import perf_counter_ns
-from scipy.optimize import fsolve
 import pickle
 import matplotlib.pyplot as plt
 global min_step, Cw, Cm, a, DEFAULT_ARR_FOLDER, d1
@@ -46,24 +41,6 @@ def find_nearest(array, value):
     return (np.abs(array - value)).argmin()
 
 
-def df(theta, d2):
-    # derivative with tan(theta)
-    first = d1/(np.square(np.cos(theta)))
-    second = d2/(1-np.square(a*np.sin(theta)))
-    return first + second
-
-
-def newton(aa, d2):
-    accuracy = 1e-9
-    error = 1.
-    x1 = np.zeros(len(aa))
-    # newton's method
-    while error > accuracy:
-        x1, x0 = x1 - f(x1, aa, d2)/df(x1, d2), np.copy(x1)
-        error = np.max(np.abs(x1-x0))
-    return x1
-
-
 # set up the data
 tarr, varr = load_arr()
 tarr = tarr[:, 0, :]
@@ -84,57 +61,73 @@ lat_index = np.arange(0, L, 1)
 lenT = len(T)
 lend2 = d2_end-d2_start
 POST = np.empty((lend2, L))  # final image array
+thetas = np.linspace(-np.pi/2, np.pi/2, int(2e5))
 
 
-def f(theta, aa, d2):
-    first = d1*np.tan(theta)
-    sec = (d2*a*np.sin(theta))/np.sqrt(1-np.square(a*np.sin(theta)))
+def approxf(x, aa, d2):
+    z = a*(x-np.power(x, 3)/(3*2)+np.power(x, 5)/(5*4*3*2))
+    z = a*np.sin(x)
+    z[z >= 1] = int(1.)
+    z[np.isnan(z)] = int(1.)
+    y = z + np.power(z, 3)/6+3*np.power(z, 5)/40
+#    first = d1*(x+np.power(x, 3)/3+2*np.power(x, 5)/15)
+    first = d1*np.tan(x)
+    sec = d2*(y+np.power(y, 3)/3+2*np.power(y, 5)/15)
     return first + sec - aa
+
+
+def arcapprox(x):
+    return x+x**3/6+3*x**5/40
 
 
 def main(lat_pix):  # lat_pix is imaging x coord
     j = 0  # imaging pixel for time/ z direction
-    zw = np.empty(L)
-    while j < 1:
+    zw = np.empty(L)  # left right, represents theta1 to transducer from impix
+    while j < lend2:
         aa = -1*lat_distance + lat_distance[lat_pix]
         k = 0
-        while k in range(L):
-            zw[k] = fsolve(f, lat_distance[-1], args=(aa[k], d2[j]))  # sin(theta_1)
+        while k < L:
+            # sin(theta_1)
+            zw[k] = thetas[np.abs(approxf(thetas, aa[k], d2[j])).argmin()]
+            if np.isnan(zw[k]):
+                zw[k] = np.pi/2
             k += 1
-        print(f(zw, aa, d2[j]))
-        zm = zw*a  # find sin(theta_2)
-        radM = np.arcsin(zm)  # theta_2
-        radW = np.arcsin(zw)  # theta_1
+        zm = np.sin(zw)*a  # find sin(theta_2)
+        zm[zm > 1] = 1
+        zm[np.isnan(zm)] = 1
+        radM = arcapprox(zm)  # theta_2
+        radW = zw  # theta_1
         delay_t = np.abs((2/Cw)*(d1/np.cos(radW) + d2[j]/np.cos(radM)))
         zi = np.round(delay_t/tstep).astype(int)
-        POST[j, lat_pix] = np_sum(V[zi[zi < lenT], lat_index[zi < lenT]])
+        POST[j, lat_pix] = np.sum(V[zi[zi < lenT], lat_index[zi < lenT]])
         j += 1
-        return zw
+    return zi
 
 
 if __name__ == '__main__':
     # Parallel processing
-    zi = main(0)
-#    start_time = perf_counter_ns()*1e-9
-#    jobs = []
-#    print("Append")
-#    for i in range(1):
-#        jobs.append(threading.Thread(target=main, args=(i,)))
-#    print("Starting")
-#    for job in jobs:
-#        job.start()
-#    print("Joining")
-#    for job in jobs:
-#        job.join()
-#    print("Stitching")
-#    V[d2_start:d2_end, 50:150] = POST[:, 50:150]
-#    b = np.abs(hilbert(V[:, :], axis=0))
-#    pickle.dump(b, open(join(DEFAULT_ARR_FOLDER, "refraction-SAFT-{}.pkl"
-#                             .format(FOLDER_NAME)), "wb"))
-#    pickle.dump(T, open(join(DEFAULT_ARR_FOLDER, "refraction-SAFT-T-{}.pkl"), "wb"))
-#    duration = perf_counter_ns()*1e-9-start_time
-#    print(duration)
-#
+#    zi = main(0)
+    start_time = perf_counter_ns()*1e-9
+    jobs = []
+    print("Append")
+    for i in range(L):
+        jobs.append(threading.Thread(target=main, args=(i,)))
+    print("Starting")
+    for job in jobs:
+        job.start()
+    print("Joining")
+    for job in jobs:
+        job.join()
+    print("Stitching")
+    V[d2_start:d2_end, 50:150] = POST[:, 50:150]
+    b = np.abs(hilbert(V[:, :], axis=0))
+    pickle.dump(b, open(join(DEFAULT_ARR_FOLDER, "refraction-SAFT-{}.pkl"
+                             .format(FOLDER_NAME)), "wb"))
+    pickle.dump(T, open(join(DEFAULT_ARR_FOLDER, "refraction-SAFT-T-{}.pkl"), "wb"))
+    duration = perf_counter_ns()*1e-9-start_time
+    print(duration)
+
+
 #fig = plt.figure(figsize=[10, 10])
 #plt.imshow(POST[:, :], aspect='auto', cmap='gray')
 #plt.colorbar()
