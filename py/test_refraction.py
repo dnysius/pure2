@@ -8,8 +8,7 @@ from time import perf_counter_ns
 import pickle
 import matplotlib.pyplot as plt
 global min_step, Cw, Cm, a, DEFAULT_ARR_FOLDER, d1
-global lat_distance, FD, lenT, T, V, L, POST, lat_index, arr
-arr = []
+global lat_distance, FD, lenT, T, V, L, POST, lat_index
 ################################################################
 FOLDER_NAME = "1D-3FOC5in"
 directory_path = "C:\\Users\\dionysius\\Documents\\pure repo\\data\\1D SCANS"
@@ -28,7 +27,7 @@ DEFAULT_ARR_FOLDER = join(directory_path, FOLDER_NAME)
 
 def load_arr(output_folder=DEFAULT_ARR_FOLDER):
     ftarr = join(output_folder, "tarr.pkl")
-    fvarr = join(output_folder, "varr.pkl")
+    fvarr = join(output_folder, "refraction-SAFT-1D-3FOC5in.pkl")
     with open(ftarr, 'rb') as rd:
         tarr = pickle.load(rd)
     with open(fvarr, 'rb') as rd:
@@ -44,10 +43,10 @@ def find_nearest(array, value):
 # set up the data
 tarr, varr = load_arr()
 tarr = tarr[:, 0, :]
-varr = varr[:, 0, :]
+#varr = varr[:, 0, :]
 ZERO = find_nearest(tarr[:, 0], 0)
 T = tarr[ZERO:, 0]  # 1D, time columns all the same
-varr = varr[ZERO:, 50:150]
+varr = varr[ZERO:, :]
 tstep = np.abs(np.mean(T[1:]-T[:-1]))  # average timestep
 # refraction algorithm
 d1 = T[SAMPLE_START]*Cw/2  # distance
@@ -56,21 +55,19 @@ d2_end = SAMPLE_END
 d2 = T[d2_start:d2_end]*Cw/2 - d1
 V = varr[:, :]  # 2D
 L = np.shape(V)[1]  # number of transducer positions
-lat_distance = np.linspace(-L/2, L/2, L)*min_step
-lat_index = np.arange(0, L, 1)
 lenT = len(T)
 lend2 = d2_end-d2_start
 POST = np.empty((lend2, L))  # final image array
-thetas = np.linspace(-np.pi/2, np.pi/2, int(2e5))
+lat_distance = np.linspace(-L/2, L/2, L)*min_step
+lat_index = np.arange(0, L, 1)
+crit_angle = np.arcsin(1/a)
+thetas = np.linspace(0, crit_angle, int(1e4))
 
 
 def approxf(x, aa, d2):
-    z = a*(x-np.power(x, 3)/(3*2)+np.power(x, 5)/(5*4*3*2))
     z = a*np.sin(x)
     z[z >= 1] = int(1.)
-    z[np.isnan(z)] = int(1.)
     y = z + np.power(z, 3)/6+3*np.power(z, 5)/40
-#    first = d1*(x+np.power(x, 3)/3+2*np.power(x, 5)/15)
     first = d1*np.tan(x)
     sec = d2*(y+np.power(y, 3)/3+2*np.power(y, 5)/15)
     return first + sec - aa
@@ -84,51 +81,51 @@ def main(lat_pix):  # lat_pix is imaging x coord
     j = 0  # imaging pixel for time/ z direction
     zw = np.empty(L)  # left right, represents theta1 to transducer from impix
     while j < lend2:
-        aa = -1*lat_distance + lat_distance[lat_pix]
+        aa = np.abs(-1*lat_distance + lat_distance[lat_pix])
         k = 0
         while k < L:
             # sin(theta_1)
             zw[k] = thetas[np.abs(approxf(thetas, aa[k], d2[j])).argmin()]
-            if np.isnan(zw[k]):
-                zw[k] = np.pi/2
             k += 1
-        zm = np.sin(zw)*a  # find sin(theta_2)
-        zm[zm > 1] = 1
-        zm[np.isnan(zm)] = 1
+        zw = np.sin(zw)
+        zw[zw >= 1/a] = 1/a
+        zm = zw*a  # find sin(theta_2)
         radM = arcapprox(zm)  # theta_2
-        radW = zw  # theta_1
+        radW = np.arcsin(zw)  # theta_1
         delay_t = np.abs((2/Cw)*(d1/np.cos(radW) + d2[j]/np.cos(radM)))
-        zi = np.round(delay_t/tstep).astype(int)
+        zi = np.abs(np.round(delay_t/tstep).astype(int))
         POST[j, lat_pix] = np.sum(V[zi[zi < lenT], lat_index[zi < lenT]])
         j += 1
-    return zi
+    return POST
 
 
 if __name__ == '__main__':
     # Parallel processing
+    pass
 #    zi = main(0)
-    start_time = perf_counter_ns()*1e-9
-    jobs = []
-    print("Append")
-    for i in range(L):
-        jobs.append(threading.Thread(target=main, args=(i,)))
-    print("Starting")
-    for job in jobs:
-        job.start()
-    print("Joining")
-    for job in jobs:
-        job.join()
-    print("Stitching")
-    V[d2_start:d2_end, 50:150] = POST[:, 50:150]
-    b = np.abs(hilbert(V[:, :], axis=0))
-    pickle.dump(b, open(join(DEFAULT_ARR_FOLDER, "refraction-SAFT-{}.pkl"
-                             .format(FOLDER_NAME)), "wb"))
-    pickle.dump(T, open(join(DEFAULT_ARR_FOLDER, "refraction-SAFT-T-{}.pkl"), "wb"))
-    duration = perf_counter_ns()*1e-9-start_time
-    print(duration)
+#    start_time = perf_counter_ns()*1e-9
+#    jobs = []
+#    print("Append")
+#    for i in range(L):
+#        jobs.append(threading.Thread(target=main, args=(i,)))
+#    print("Starting")
+#    for job in jobs:
+#        job.start()
+#    print("Joining")
+#    for job in jobs:
+#        job.join()
+#    print("Stitching")
+#    V[d2_start:d2_end, :] = POST[:, :]
+#    b = np.abs(hilbert(V[:, :], axis=0))
+#    pickle.dump(V, open(join(DEFAULT_ARR_FOLDER, "test-SAFT-{}.pkl"
+#                             .format(FOLDER_NAME)), "wb"))
+#    pickle.dump(T, open(join(DEFAULT_ARR_FOLDER, "test-SAFT-T-{}.pkl"), "wb"))
+#    duration = perf_counter_ns()*1e-9-start_time
+#    print(duration)
 
 
-#fig = plt.figure(figsize=[10, 10])
-#plt.imshow(POST[:, :], aspect='auto', cmap='gray')
-#plt.colorbar()
-#plt.show()
+fig = plt.figure(figsize=[10, 10])
+plt.imshow(V[SAMPLE_START-ZERO:SAMPLE_END-ZERO, :], aspect='auto', cmap='gray')
+plt.colorbar()
+plt.title("1D-3FOC5in SAFT")
+plt.show()
