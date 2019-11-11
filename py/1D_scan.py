@@ -7,11 +7,11 @@ from os import getcwd
 from os.path import join, dirname
 from matplotlib.ticker import FixedFormatter
 global min_step, FILENAME
-FOLDER_NAME = "1D-3FOC5in"  # edit this
-FILENAME = "varr.pkl"  # and this
-FILENAME = "SAFT-1D-3FOC5in.pkl"
-min_step = 4e-4  # and this
-
+FOLDER_NAME = "1D-3FOC50cm-60um"  # edit this
+#METHOD = "refraction"
+METHOD = "SAFT"
+#METHOD = "B-scan"
+min_step = 6e-4  # and this
 if FOLDER_NAME[:2] == "2D":
     par = "2D SCANS"
 elif FOLDER_NAME[:2] == "1D":
@@ -23,13 +23,16 @@ SCAN_FOLDER = join(dirname(getcwd()), "data", par, FOLDER_NAME)
 SCAN_FOLDER = join("C:\\Users\\dionysius\\Documents\\pure repo\\data", par, FOLDER_NAME)
 
 
-def load_arr(output_folder=SCAN_FOLDER):
+def load_arr(FILENAME, output_folder=SCAN_FOLDER):
     ftarr = join(output_folder, "tarr.pkl")
     fvarr = join(output_folder, FILENAME)
     with open(ftarr, 'rb') as rd:
         tarr = pickle.load(rd)
     with open(fvarr, 'rb') as rd:
-        varr = pickle.load(rd)
+        if "pkl" in FILENAME:
+            varr = pickle.load(rd)
+        else:
+            varr = np.load(rd)
     return tarr, varr
 
 
@@ -43,21 +46,26 @@ def bscan(tarr, varr, start=0, end=-1, y1=0, y2=-1, absmax=0):
     fig, ax1 = plt.subplots(1, 1, figsize=(14, 10))
     if y2 == -1:
         y2 = len(varr[start:end, 0]) - 1
-    if FILENAME == "varr.pkl" and len(varr.shape)==3:
-        b = np.abs(hilbert(varr[:, 0, :], axis=0))  # b = varr[:, 0, :]
-    else:
-        b = np.abs(hilbert(varr, axis=0))  # b = varr[:, 0, :]
-    if absmax==0:
-        b = 20*np.log10(b/np.max(b.flatten()))
-    else:
-        b = 20*np.log10(b/absmax)
-    b = b[start:end, :]
-    im0 = plt.imshow(b, aspect='auto', cmap='gray', vmin=-60, vmax=0, interpolation='none', alpha=0)
+#    if FILENAME == "varr.pkl" and len(varr.shape)==3:
+#        b = np.abs(hilbert(varr[:, 0, :], axis=0))  # b = varr[:, 0, :]
+#    else:
+#        b = np.abs(hilbert(varr, axis=0))  # b = varr[:, 0, :]
+#    if absmax==0:
+#        b = 20*np.log10(b/np.max(b.flatten()))
+#    else:
+#        b = 20*np.log10(b/absmax)
+    b = varr[start:end, :]
+#    im0 = plt.imshow(b, aspect='auto', cmap='gray', vmin=-60, vmax=0, interpolation='none', alpha=0)
+    im0 = plt.imshow(b, aspect='auto', cmap='gray', interpolation='none', alpha=0)
+
     ax1.set_xticklabels(np.round(ax1.get_xticks()*100*min_step, 4))
     ax1.set_yticklabels((ax1.get_yticks()).astype(int))
-    plt.title("{0}".format(FOLDER_NAME))
+    plt.title("{0} {1}".format(FOLDER_NAME, METHOD))
     ax2 = ax1.twinx()  # second scale on same axes
-    im1 = ax2.imshow(b, aspect='auto', cmap='gray', vmin=-60, vmax=0, interpolation='none', alpha=1)
+#    im1 = ax2.imshow(b, aspect='auto', cmap='gray', vmin=-60, vmax=0, interpolation='none', alpha=1)
+    im1 = ax2.imshow(b, aspect='auto', cmap='gray',
+                     interpolation='none', alpha=1)
+
     fig.colorbar(im1, orientation='vertical', pad=0.08)
     plt.axhline(y=y1, label='{}'.format(y1+start))
     plt.axhline(y=y2, label='{}'.format(y2+start))
@@ -116,17 +124,28 @@ def reg_plot(b):
     plt.figure(figsize=[14, 10])
     plt.imshow(b, aspect='auto', cmap='gray')
     plt.colorbar()
+    plt.title("{} refraction".format(FOLDER_NAME))
     plt.show()
 
 
 if __name__ == '__main__':
-    tarr, varr = load_arr(SCAN_FOLDER)
+#    FILENAME = "refraction-SAFT-1D-3FOC50cm-60um.pkl"  # and this
+    FILENAME = "SAFT-1D-3FOC50cm-60um.pkl"
+#    FILENAME = "varr.pkl"
+#    FILENAME = "sample-refraction.npy"
+    tarr, varr = load_arr(FILENAME)
     timestep = np.mean(tarr[1:, :, :] - tarr[:-1, :, :])  # get avg timestep
     if FILENAME == 'varr.pkl':
         varr = varr[:, 0, :]
-#    reg_plot(varr)
+    varr = varr[:, :175]
+
+    ibscan(tarr, varr, start=31500-2315, end=33000-2315)
+#    arr = varr[31500-2315:33000-2315, :175]
+#    arr = varr[31500:33000, :175]
+#    np.save(join(SCAN_FOLDER, "sample-refraction.npy"), arr)
+#    reg_plot(arr)
 #    reg_plot(varr[31500:(31500+934), :])
-    reg_plot(varr[15750:17750, 50:150])
+#    reg_plot(varr[15750:17750, 50:150])
 #    ibscan(tarr, varr[12000:, :])
 #    abs_max = np.max(np.abs(varr.flatten()))
 #    ibscan(tarr, varr, start=0, end=-1)
