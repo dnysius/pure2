@@ -8,7 +8,7 @@ from time import perf_counter_ns
 import pickle
 import matplotlib.pyplot as plt
 global min_step, Cw, Cm, a, DEFAULT_ARR_FOLDER, d1
-global lat_distance, FD, lenT, T, V, L, POST, lat_index
+global lat_distance, FD, lenT, T, V, L, POST, lat_index, foc
 ################################################################
 FOLDER_NAME = "1D-3FOC50cm-60um"
 directory_path = "C:\\Users\\dionysius\\Documents\\pure repo\\data\\1D SCANS"
@@ -21,6 +21,7 @@ RIGHT = 175
 Cw = 1498  # speed of sound in (w)ater
 Cm = 6320  # speed of sound in (m)etal
 a = Cm/Cw  # ratio between two speeds of sound
+foc = 0.0762  # metres
 #DEFAULT_ARR_FOLDER = join(dirname(getcwd()), "data", "1D SCANS", FOLDER_NAME)
 DEFAULT_ARR_FOLDER = join(directory_path, FOLDER_NAME)
 
@@ -75,11 +76,6 @@ def approxf(x, aa, d2):
     return first + sec - aa
 
 
-def arcapprox(x):
-    # arcsin(x) approximation to 5th degree
-    return x+x**3/6+3*x**5/40
-
-
 def main(lat_pix):  # lat_pix is imaging x coord
     j = 0  # imaging pixel for time/ z direction
     zw = np.empty(L)  # left right, represents theta1 to transducer from impix
@@ -88,14 +84,35 @@ def main(lat_pix):  # lat_pix is imaging x coord
         k = 0
         while k < L:
             # sin(theta_1)
-            zw[k] = thetas[np.abs(approxf(thetas, aa[k], d2[j])).argmin()]
+#            zw[k] = thetas[np.abs(approxf(thetas, aa[k], d2[j])).argmin()]
+            # roots
+            P4 = aa**2
+            P3 = -2*d1*aa
+            P2 = (aa**2-aa**2*a**2+d1**2-a**2*d2**2)
+            P1 = 2*d1*aa*(a**2-1)
+            P0 = d1**2*(1-a**2)
+            z = np.roots([P4, P3, P2, P1, P0])  # z array
+            # there may be no solutions
+            z = z[np.isreal(z)]
+            if z.size != 0:
+                y0 = np.sqrt(np.square(z)+1)
+                stheta1 = 1/y0
+                stheta1 = stheta1[np.abs(stheta1) <= 1/a]
+                # try to see if there must be a unique solution - math theorem
+                zw[k] = np.arcsin(stheta1)
+            else:
+                # if no solution, calculate delay like SAFT
+                z = d2[j] + d1 - foc
+                delay_t = (2/Cw)*np.sqrt(aa**2 + np.square(z))
+                zi = np.abs(np.round(delay_t/tstep)).astype(int)
             k += 1
         zw = np.sin(zw)
         zw[zw >= 1/a] = 1/a
         zm = zw*a  # find sin(theta_2)
-        radM = arcapprox(zm)  # theta_2
+        radM = np.arcsin(zm)  # theta_2
         radW = np.arcsin(zw)  # theta_1
-        delay_t = np.abs((2/Cw)*(d1/np.cos(radW) + d2[j]/np.cos(radM)))
+        # different speed of sound for each term
+        delay_t = np.abs(2*(d1/Cw/np.cos(radW) + d2[j]/Cm/np.cos(radM)))
         zi = np.abs(np.round(delay_t/tstep).astype(int))
         POST[j, lat_pix] = np.sum(V[zi[zi < lenT], lat_index[zi < lenT]])
         j += 1

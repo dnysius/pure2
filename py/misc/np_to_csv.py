@@ -14,5 +14,7 @@ def to_csv(path):
 
 
 if __name__ == '__main__':
-    pass
-#     to_csv("1D-15FOC7in")
+#    pass
+    directory_path = "C:\\Users\\dionysius\\Documents\\pure repo\\data\\1D SCANS"
+    FOLDER_NAME = "1D-3FOC50cm-60um"
+    to_csv(join(directory_path, FOLDER_NAME))
