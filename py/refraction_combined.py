@@ -1,4 +1,17 @@
 # -*- coding: utf-8 -*-
+"""
+Ensure that the parameters initialized after library imports are correct and
+also look at the end of the program to check that the filenames for the
+final ndarrays to be saved are correct.
+
+Currently we use `threading` to speed up the program. We observed major
+improvements in program runtime with the original SAFT algorithm (~10 min).
+Due to the function solving in the refraction algorithm, we cannot vectorize
+the algorithm entirely, and must resort to for loops. However, since the
+processing of each imaging pixel is independent to another imaging pixel,
+we should look into multiprocessing libraries in combination with a
+sufficiently-powered computer. One example is `mpi4py`.
+"""
 import numpy as np
 import threading
 from os import getcwd
@@ -9,7 +22,6 @@ import pickle
 import matplotlib.pyplot as plt
 global min_step, Cw, Cm, a, ARR_FOL, d1
 global lat_distance, FD, lenT, T, V, L, POST, lat_index, foc
-################################################################
 FOLDER_NAME = "1D-3FOC50cm-60um"
 directory_path = ""
 min_step = 6e-4
@@ -17,8 +29,8 @@ SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
 LEFT: int = 0
 RIGHT: int = 175
-Cw = 1498  # speed of sound in (w)ater
-Cm = 6320  # speed of sound in (m)etal
+Cw = 1498  # speed of sound in Water
+Cm = 6320  # speed of sound in Metal
 a = Cm/Cw  # ratio between two speeds of sound
 foc = 0.0762  # metres
 ARR_FOL = join(directory_path, FOLDER_NAME)
@@ -77,13 +89,12 @@ def main(lat_pix: int) -> None:  # lat_pix is imaging x coord
             P1 = 2*d1*aa[k]*(a**2-1)
             P0 = d1**2*(1-a**2)
             roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
-            # there may be no solutions
             roots = roots[np.isreal(roots)]
             if roots.size != 0:
                 y0 = np.sqrt(np.square(roots)+1)
-                stheta1 = 1/y0
+                stheta1 = 1./y0
                 stheta1 = stheta1[np.abs(stheta1) <= 1/a]
-                stheta1 = np.max(stheta1.flatten())
+                stheta1 = np.max(stheta1.flatten())  # ndarray to float
                 rad1 = np.arcsin(stheta1)  # theta_1
                 rad2 = np.arcsin(stheta1*a)  # theta_2
                 # different speed of sound for each term
@@ -115,11 +126,15 @@ if __name__ == '__main__':
         job.join()
     print("Stitching")
     V[d2_start:d2_end, LEFT:RIGHT] = POST[:, :]
-#    b = np.abs(hilbert(V[:, :], axis=0))
-    pickle.dump(V, open(join(ARR_FOL, "comb-thread-{}.pkl"
-                             .format(FOLDER_NAME)), "wb"))
-    pickle.dump(T, open(join(ARR_FOL, "comb-thread-T-{}.pkl"
-                             .format(FOLDER_NAME)), "wb"))
+#    V_filtered = np.abs(hilbert(V[:, :], axis=0))
+    V_path = open(join(ARR_FOL, "comb-thread-{}.pkl"
+                       .format(FOLDER_NAME)), "wb")
+    T_path = open(join(ARR_FOL, "comb-thread-T-{}.pkl"
+                       .format(FOLDER_NAME)), "wb")
+    pickle.dump(V, V_path)
+    pickle.dump(T, T_path)
+    np.save(open(join(ARR_FOL, "comb-thread-{}.npy"
+                      .format(FOLDER_NAME)), "wb"), V, allow_pickle=False)
     duration = perf_counter_ns()*1e-9-start_time
     print(duration)
 
