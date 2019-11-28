@@ -23,8 +23,8 @@ import matplotlib.pyplot as plt
 global min_step, Cw, Cm, a, ARR_FOL, d1
 global lat_distance, FD, lenT, T, V, L, POST, lat_index, foc
 FOLDER_NAME = "1D-3FOC50cm-60um"
-directory_path = ""
-min_step = 6e-4
+directory_path = "C:\\Users\\indra\\Documents\\GitHub\\1D-3FOC50cm-60um"
+min_step: float = 6e-4
 SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
 LEFT: int = 0
@@ -51,7 +51,7 @@ def load_arr(FILENAME, output_folder=ARR_FOL):
 
 def find_nearest(array, value):
     array = np.asarray(array, dtype=float)
-    return (np.abs(array - value)).argmin()
+    return np.abs(array - value).argmin()
 
 
 # import data
@@ -131,16 +131,15 @@ if __name__ == '__main__':
                        .format(FOLDER_NAME)), "wb")
     T_path = open(join(ARR_FOL, "comb-thread-T-{}.pkl"
                        .format(FOLDER_NAME)), "wb")
+    V_npy_path = open(join(ARR_FOL, "comb-thread-{}.npy"
+                      .format(FOLDER_NAME)), "wb")
     pickle.dump(V, V_path)
     pickle.dump(T, T_path)
-    np.save(open(join(ARR_FOL, "comb-thread-{}.npy"
-                      .format(FOLDER_NAME)), "wb"), V, allow_pickle=False)
+    np.save(V_npy_path, V, allow_pickle=False)
     duration = perf_counter_ns()*1e-9-start_time
     print(duration)
-
-
-fig = plt.figure(figsize=[10, 10])
-plt.imshow(V[d2_start:d2_end, LEFT:RIGHT], aspect='auto', cmap='gray')
-plt.colorbar()
-plt.title("{} refraction".format(FOLDER_NAME))
-plt.show()
+    fig = plt.figure(figsize=[10, 10])
+    plt.imshow(V[d2_start:d2_end, LEFT:RIGHT], aspect='auto', cmap='gray')
+    plt.colorbar()
+    plt.title("{} refraction".format(FOLDER_NAME))
+    plt.show()
