@@ -21,10 +21,10 @@ from time import perf_counter_ns
 import pickle
 import matplotlib.pyplot as plt
 global min_step, Cw, Cm, a, ARR_FOL, d1
-global lat_distance, FD, lenT, T, V, L, POST, lat_index, foc
+global lat_distance, lenT, T, V, L, POST, lat_index, foc
 FOLDER_NAME = "1D-3FOC50cm-60um"
-directory_path = "C:\\Users\\indra\\Documents\\GitHub\\1D-3FOC50cm-60um"
-min_step: float = 6e-4
+directory_path = "C:\\Users\\indra\\Documents\\GitHub"
+min_step = 6e-4
 SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
 LEFT: int = 0
@@ -63,7 +63,7 @@ T = tarr[ZERO:, 0]  # 1D, time columns all the same
 varr = varr[ZERO:, LEFT:RIGHT]  # ZERO'd & sample width
 tstep: float = np.abs(np.mean(T[1:]-T[:-1]))  # average timestep
 # array initialization
-d1: float = T[d2_start]*Cw/2  # distance to sample
+d1 = T[d2_start]*Cw/2  # distance to sample
 d2 = T[d2_start:d2_end]*Cw/2 - d1  # sample grid (y distance)
 V = varr[:, :]  # voltages
 L = np.shape(V)[1]  # number of transducer positions
@@ -80,18 +80,18 @@ def main(lat_pix: int) -> None:  # lat_pix is imaging x coord
     j: int = 0  # imaging pixel (time axis)
     dt = np.empty(L)  # delayed time from imaging pixel to transducer position
     while j < lend2:
-        aa = np.abs(-1*lat_distance + lat_distance[lat_pix])
+        aa = np.abs(lat_distance - lat_distance[lat_pix])
         k: int = 0  # angles b/n transducer postion and imaging pixel
         while k < L:
             P4 = aa[k]**2
             P3 = -2*d1*aa[k]
-            P2 = (aa[k]**2-aa[k]**2*a**2+d1**2-a**2*d2**2)
+            P2 = (aa[k]**2-aa[k]**2*a**2+d1**2-a**2*d2[j]**2)
             P1 = 2*d1*aa[k]*(a**2-1)
             P0 = d1**2*(1-a**2)
             roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
-            roots = roots[np.isreal(roots)]
+            roots = np.real(roots[np.isreal(roots)*(roots >= 0)])
             if roots.size != 0:
-                y0 = np.sqrt(np.square(roots)+1)
+                y0 = np.sqrt(np.square(roots) + 1)
                 stheta1 = 1./y0
                 stheta1 = stheta1[np.abs(stheta1) <= 1/a]
                 stheta1 = np.max(stheta1.flatten())  # ndarray to float
