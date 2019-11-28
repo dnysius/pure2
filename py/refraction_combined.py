@@ -89,18 +89,22 @@ def main(lat_pix: int) -> None:  # lat_pix is imaging x coord
             P1 = 2*d1*aa[k]*(a**2-1)
             P0 = d1**2*(1-a**2)
             roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
-            roots = np.real(roots[np.isreal(roots)*(roots >= 0)])
+            roots = np.real(roots[np.isreal(roots)])
+            SAFT = False
             if roots.size != 0:
                 y0 = np.sqrt(np.square(roots) + 1)
                 stheta1 = 1./y0
-                stheta1 = stheta1[np.abs(stheta1) <= 1/a]
-                stheta1 = np.max(stheta1.flatten())  # ndarray to float
-                rad1 = np.arcsin(stheta1)  # theta_1
-                rad2 = np.arcsin(stheta1*a)  # theta_2
-                # different speed of sound for each term
-                dt: float = 2*(np.abs(d1/Cw/np.cos(rad1))
-                               + np.abs(d2[j]/Cm/np.cos(rad2)))
-            elif roots.size == 0:
+                st1 = stheta1[np.abs(stheta1) <= 1/a]
+                if st1.size > 0:
+                    stheta1 = np.max(st1)
+                    rad1 = np.arcsin(stheta1)  # theta_1
+                    rad2 = np.arcsin(stheta1*a)  # theta_2
+                    # different speed of sound for each term
+                    dt: float = 2*(np.abs(d1/Cw/np.cos(rad1))
+                                   + np.abs(d2[j]/Cm/np.cos(rad2)))
+                else:
+                    SAFT = True
+            if roots.size == 0 or SAFT:
                 # if no solution, calculate delay like SAFT
                 z: float = d2[j] + d1 - foc
                 dt: float = (2/Cw)*np.sqrt(aa[k]**2 + np.square(z))
