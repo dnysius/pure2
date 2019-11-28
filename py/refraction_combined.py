@@ -108,8 +108,8 @@ def main(lat_pix: int) -> None:  # lat_pix is imaging x coord
                 # if no solution, calculate delay like SAFT
                 z: float = d2[j] + d1 - foc
                 dt[k]: float = (2/Cw)*np.sqrt(aa[k]**2 + np.square(z))
-            zi: int = np.round(dt/tstep).astype(int)  # delayed t (indices)
             k += 1
+        zi: int = np.round(dt/tstep).astype(int)  # delayed t (indices)
         POST[j, lat_pix] = np.sum(V[zi[zi < lenT], lat_index[zi < lenT]])
         j += 1
     return None
