@@ -67,7 +67,7 @@ d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample grid (y distance)
 L = varr.shape[1]  # number of transducer positions
 lenT = len(T)  # length of time from ZERO to end of array
 lend2: int = d2_end-d2_start  # sample thickness
-IMAGE = np.empty((lend2, L))  # empty final image array
+IMAGE = np.empty((lend2, RIGHT-LEFT))  # empty final image array
 transducer_positions = np.linspace(-L/2, L/2, L)*min_step
 trans_index = np.arange(0, L, 1)  # transducer positions indices
 
@@ -125,21 +125,27 @@ if __name__ == '__main__':
     for job in jobs:
         job.join()
     print("Stitching")
-    V[d2_start:d2_end, LEFT:RIGHT] = IMAGE[:, :]
+    V[d2_start:d2_end, :] = IMAGE[:, :]
+    varr[SAMPLE_START:SAMPLE_END, LEFT:RIGHT] = IMAGE[:, :]
 #    V_filtered = np.abs(hilbert(V[:, :], axis=0))
-    V_path = open(join(ARR_FOL, "comb-thread-{}.pkl"
+    V_path = open(join(ARR_FOL, "comb-thread-V-{}.pkl"
                        .format(FOLDER_NAME)), "wb")
     T_path = open(join(ARR_FOL, "comb-thread-T-{}.pkl"
                        .format(FOLDER_NAME)), "wb")
-    V_npy_path = open(join(ARR_FOL, "comb-thread-{}.npy"
+    V_npy_path = open(join(ARR_FOL, "comb-thread-fullview-{}.npy"
                       .format(FOLDER_NAME)), "wb")
     pickle.dump(V, V_path)
     pickle.dump(T, T_path)
-    np.save(V_npy_path, V, allow_pickle=False)
+    np.save(V_npy_path, varr, allow_pickle=False)
     duration = perf_counter_ns()*1e-9-start_time
     print(duration)
     fig = plt.figure(figsize=[10, 10])
-    plt.imshow(V[d2_start:d2_end, LEFT:RIGHT], aspect='auto', cmap='gray')
+    plt.imshow(varr[SAMPLE_START:SAMPLE_END, LEFT:RIGHT], aspect='auto', cmap='gray')
     plt.colorbar()
-    plt.title("{} refraction".format(FOLDER_NAME))
+    plt.title("{} b-scan".format(FOLDER_NAME))
+    plt.show()
+    fig = plt.figure(figsize=[10, 10])
+    plt.imshow(V[d2_start:d2_end, :], aspect='auto', cmap='gray')
+    plt.colorbar()
+    plt.title("{} combined".format(FOLDER_NAME))
     plt.show()
