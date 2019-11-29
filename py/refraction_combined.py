@@ -21,7 +21,7 @@ from time import perf_counter_ns
 import pickle
 import matplotlib.pyplot as plt
 global min_step, Cw, Cm, a, ARR_FOL, d1
-global lat_distance, lenT, T, V, L, POST, lat_index, foc
+global transducer_positions, lenT, T, V, L, IMAGE, trans_index, foc
 FOLDER_NAME = "1D-3FOC50cm-60um"
 directory_path = "C:\\Users\\indra\\Documents\\GitHub"
 min_step = 6e-4
@@ -60,28 +60,24 @@ ZERO: int = find_nearest(tarr[:, 0], 0)
 d2_start: int = SAMPLE_START - ZERO
 d2_end: int = SAMPLE_END - ZERO
 T = tarr[ZERO:, 0]  # 1D, time columns all the same
-varr = varr[ZERO:, LEFT:RIGHT]  # ZERO'd & sample width
+V = np.copy(varr[ZERO:, LEFT:RIGHT])  # ZERO'd & sample width
 tstep: float = np.abs(np.mean(T[1:]-T[:-1]))  # average timestep
-# array initialization
-d1 = T[d2_start]*Cw/2  # distance to sample
-d2 = T[d2_start:d2_end]*Cw/2 - d1  # sample grid (y distance)
-V = varr[:, :]  # voltages
-L = np.shape(V)[1]  # number of transducer positions
+d1 = T[d2_start]*Cw/2.  # distance to sample
+d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample grid (y distance)
+L = varr.shape[1]  # number of transducer positions
 lenT = len(T)  # length of time from ZERO to end of array
 lend2: int = d2_end-d2_start  # sample thickness
-POST = np.empty((lend2, L))  # empty final image array
-lat_distance = np.linspace(-L/2, L/2, L)*min_step  # transducer positions
-lat_index = np.arange(0, L, 1)  # transducer positions indices
-crit_angle: float = np.arcsin(1/a)  # theta_1 max angle (take sin(theta_2)=1)
-thetas = np.linspace(0, crit_angle, int(1e4))  # discretized theta values
+IMAGE = np.empty((lend2, L))  # empty final image array
+transducer_positions = np.linspace(-L/2, L/2, L)*min_step
+trans_index = np.arange(0, L, 1)  # transducer positions indices
 
 
 def main(lat_pix: int) -> None:  # lat_pix is imaging x coord
     j: int = 0  # imaging pixel (time axis)
     dt = np.zeros(L)  # delayed time from imaging pixel to transducer position
     while j < lend2:
-        aa = np.abs(lat_distance - lat_distance[lat_pix])
-        k: int = 0  # angles b/n transducer postion and imaging pixel
+        aa = np.abs(transducer_positions - transducer_positions[lat_pix])
+        k: int = 0  # angles b/n transducer IMAGEion and imaging pixel
         while k < L:
             P4 = aa[k]**2
             P3 = -2*d1*aa[k]
@@ -96,21 +92,21 @@ def main(lat_pix: int) -> None:  # lat_pix is imaging x coord
                 stheta1 = 1./y0
                 st1 = stheta1[np.abs(stheta1) <= 1/a]
                 if st1.size > 0:
-                    stheta1 = np.max(st1)
+                    stheta1 = np.max(np.abs(st1))
                     rad1 = np.arcsin(stheta1)  # theta_1
                     rad2 = np.arcsin(stheta1*a)  # theta_2
-                    # different speed of sound for each term
                     dt[k]: float = 2*(np.abs(d1/Cw/np.cos(rad1))
                                       + np.abs(d2[j]/Cm/np.cos(rad2)))
                 else:
                     SAFT = True
-            if roots.size == 0 or SAFT:
-                # if no solution, calculate delay like SAFT
+            # if no roots found, calculate delay like SAFT
+            if (roots.size == 0) or (SAFT is True):
                 z: float = d2[j] + d1 - foc
-                dt[k]: float = (2/Cw)*np.sqrt(aa[k]**2 + np.square(z))
+                dt[k]: float = (2/Cw)*np.sqrt(aa[k]**2 + z**2) + 2*foc/Cw
             k += 1
-        zi: int = np.round(dt/tstep).astype(int)  # delayed t (indices)
-        POST[j, lat_pix] = np.sum(V[zi[zi < lenT], lat_index[zi < lenT]])
+        zi = np.round(dt/tstep).astype(int)  # delayed t (indices)
+        IMAGE[j, lat_pix] = np.sum(varr[zi[zi < lenT],
+                                   trans_index[zi < lenT]])
         j += 1
     return None
 
@@ -120,7 +116,7 @@ if __name__ == '__main__':
     start_time = perf_counter_ns()*1e-9
     jobs = []
     print("Append")
-    for i in range(L):
+    for i in range(LEFT, RIGHT, 1):
         jobs.append(threading.Thread(target=main, args=(i,)))
     print("Starting")
     for job in jobs:
@@ -129,7 +125,7 @@ if __name__ == '__main__':
     for job in jobs:
         job.join()
     print("Stitching")
-    V[d2_start:d2_end, LEFT:RIGHT] = POST[:, :]
+    V[d2_start:d2_end, LEFT:RIGHT] = IMAGE[:, :]
 #    V_filtered = np.abs(hilbert(V[:, :], axis=0))
     V_path = open(join(ARR_FOL, "comb-thread-{}.pkl"
                        .format(FOLDER_NAME)), "wb")
