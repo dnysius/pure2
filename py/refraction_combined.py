@@ -86,7 +86,7 @@ def main(lat_pix: int) -> None:  # lat_pix is imaging x coord
             P0 = d1**2*(1-a**2)
             roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
             roots = np.real(roots[np.isreal(roots)])
-            SAFT = False
+#            SAFT = False
             if roots.size != 0:
                 y0 = np.sqrt(np.square(roots) + 1)
                 stheta1 = 1./y0
@@ -97,12 +97,12 @@ def main(lat_pix: int) -> None:  # lat_pix is imaging x coord
                     rad2 = np.arcsin(stheta1*a)  # theta_2
                     dt[k]: float = 2*(np.abs(d1/Cw/np.cos(rad1))
                                       + np.abs(d2[j]/Cm/np.cos(rad2)))
-                else:
-                    SAFT = True
+#                else:
+#                    SAFT = True
             # if no roots found, calculate delay like SAFT
-            if (roots.size == 0) or (SAFT is True):
-                z: float = d2[j] + d1 - foc
-                dt[k]: float = (2/Cw)*np.sqrt(aa[k]**2 + z**2) + 2*foc/Cw
+#            if (roots.size == 0) or (SAFT is True):
+#                z: float = d2[j] + d1 - foc
+#                dt[k]: float = (2/Cw)*np.sqrt(aa[k]**2 + z**2) + 2*foc/Cw
             k += 1
         zi = np.round(dt/tstep).astype(int)  # delayed t (indices)
         IMAGE[j, lat_pix] = np.sum(varr[zi[zi < lenT],
@@ -126,7 +126,7 @@ if __name__ == '__main__':
         job.join()
     print("Stitching")
     V[d2_start:d2_end, :] = IMAGE[:, :]
-    varr[SAMPLE_START:SAMPLE_END, LEFT:RIGHT] = IMAGE[:, :]
+#    varr[SAMPLE_START:SAMPLE_END, LEFT:RIGHT] = IMAGE[:, :]
 #    V_filtered = np.abs(hilbert(V[:, :], axis=0))
     V_path = open(join(ARR_FOL, "comb-thread-V-{}.pkl"
                        .format(FOLDER_NAME)), "wb")
@@ -142,7 +142,8 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=[10, 10])
     plt.imshow(varr[SAMPLE_START:SAMPLE_END, LEFT:RIGHT], aspect='auto', cmap='gray')
     plt.colorbar()
-    plt.title("{} b-scan".format(FOLDER_NAME))
+    plt.title("{}
+    b-scan".format(FOLDER_NAME))
     plt.show()
     fig = plt.figure(figsize=[10, 10])
     plt.imshow(V[d2_start:d2_end, :], aspect='auto', cmap='gray')
