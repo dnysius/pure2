@@ -20,6 +20,7 @@ Cm = 6320  # speed of sound in Metal
 a = Cm/Cw  # ratio between two speeds of sound
 foc = 0.0762  # metres
 ARR_FOL = join(directory_path, FOLDER_NAME)
+fix = 150
 
 
 def load_arr(FILENAME, output_folder=ARR_FOL):
@@ -59,15 +60,15 @@ transducer_positions = np.arange(L)*min_step
 trans_index = np.arange(0, L, 1)  # transducer positions indices
 
 # refraction
-def refraction(j):  # lat_pix is imaging x coord
+def roots(j):  # lat_pix is imaging x coord
     k: int = 0
     dt = np.zeros(L)  # delayed time: imaging pixel to transducer
-    aa = transducer_positions - transducer_positions[0]
+    aa = np.abs(transducer_positions - transducer_positions[fix])
     if j == 0:
         dt = (2/Cw)*np.sqrt(aa[:]**2 + d1**2) + 2*foc/Cw
     else:
         while k < L:
-            if d2[j] != 0:
+            if d2[j] != 0 and aa[k] != 0:
                 P4 = aa[k]**2
                 P3 = -2*d1*aa[k]
                 P2 = (aa[k]**2-aa[k]**2*a**2+d1**2-a**2*d2[j]**2)
@@ -80,30 +81,83 @@ def refraction(j):  # lat_pix is imaging x coord
                     stheta1 = 1./y0
                     st1 = stheta1[np.abs(stheta1) <= 1/a]
                     if st1.size > 0:
-                        stheta1 = np.max(np.abs(st1))
+                        print(np.degrees(np.arcsin(st1)))
+                        stheta1 = np.min(np.abs(st1))
                         rad1 = np.arcsin(stheta1)  # theta_1
                         rad2 = np.arcsin(stheta1*a)  # theta_2
                         dt[k]: float = 2*(np.abs(d1/Cw/np.cos(rad1))
                                           + np.abs(d2[j]/Cm/np.cos(rad2))
                                           + foc/Cw)
-                k += 1
+            elif aa[k] == 0 and d2[j] != 0:
+                dt[k] = 2*(d1/Cw + d2[j]/Cm + foc/Cw)
+            elif aa[k] == 0 and d2[j] == 0:
+                dt[k] = 2*(d1/Cw + foc/Cw)
+            k += 1
     zi = np.round(dt/tstep).astype(int)  # delayed t (indices)
     return zi
 
 
 def saft(j):
     dt = np.zeros(L)  # delayed time: imaging pixel to transducer
-    aa = transducer_positions - transducer_positions[0]
+    aa = np.abs(transducer_positions - transducer_positions[fix])
     z: float = d2[j] + d1
     dt: float = (2/Cw)*np.sqrt(aa[:]**2 + z**2) + 2*foc/Cw
+    zi = np.round(dt/tstep).astype(int)  # delayed t (indices)
+    return zi
+
+
+crit_angle = np.arcsin(1/a)
+thetas = np.linspace(-1*crit_angle, crit_angle, int(2e5))
+
+
+def approxf(x, aa, d2):
+    # the nonlinear function, solving for theta_1
+    z = a*np.sin(x)
+    z[z >= 1] = int(1.)
+    theta2 = np.arcsin(z)
+#    y = z + np.power(z, 3)/6+3*np.power(z, 5)/40
+    first = d1*np.tan(x)
+#    sec = d2*(y+np.power(y, 3)/3+2*np.power(y, 5)/15)
+    sec = d2*np.tan(theta2)
+    return first + sec - aa
+
+
+def refr(j):
+    k = 0
+    dt = np.zeros(L)  # delayed time: imaging pixel to transducer
+    aa = transducer_positions - transducer_positions[fix]
+    while k < L:
+        rad1 = thetas[np.abs(approxf(thetas, abs(aa[k]), d2[j])).argmin()]
+        if np.isnan(rad1):
+            rad1 = crit_angle
+        if np.sin(rad1)>1/a:
+            rad1 = crit_angle
+        rad2 = np.arcsin(a*np.sin(rad1))
+        s = np.abs(d2[j]/Cm/np.cos(rad2))
+        if np.isnan(s) or s < 0 or s is None:
+            sec = 0
+        else:
+            sec = s
+        dt[k]: float = 2*(np.abs(d1/Cw/np.cos(rad1)) + sec + foc/Cw)
+        k += 1
     zi = np.round(dt/tstep).astype(int)  # delayed t (indices)
     return zi
 
 if __name__ == '__main__':
     start_time = perf_counter_ns()*1e-9
     dstep = tstep*Cw/2
-    zi_saft = saft(1)
-    zi_refr = refraction(1)
-    zi = (zi_refr-zi_saft)[(zi_saft>0)*(zi_refr>0)]  # refr>saft
-    print(zi_saft)
+    layer = 1
+    zi_saft = saft(layer)
+    zi_root = roots(layer)
+    zi_refr = refr(layer)
+#    zi = (zi_refr-zi_saft)[(zi_saft>0)*(zi_refr>0)]  # refr>saft
+    plt.figure(figsize=[10, 10])
+    plt.plot(zi_saft, label='saft')
+    plt.plot(zi_refr, label='refr')
+    plt.plot(zi_root, label='root')
+    plt.title("2e5 points, imaging pix at 0")
+    plt.xlabel("x-coord")
+    plt.ylabel("time delay (index)")
+    plt.legend()
+    plt.show()
     duration = perf_counter_ns()*1e-9-start_time

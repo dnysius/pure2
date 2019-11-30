@@ -84,27 +84,7 @@ def main(lat_pix):  # lat_pix is imaging x coord
         k = 0
         while k < L:
             # sin(theta_1)
-#            zw[k] = thetas[np.abs(approxf(thetas, aa[k], d2[j])).argmin()]
-            # roots
-            P4 = aa**2
-            P3 = -2*d1*aa
-            P2 = (aa**2-aa**2*a**2+d1**2-a**2*d2**2)
-            P1 = 2*d1*aa*(a**2-1)
-            P0 = d1**2*(1-a**2)
-            z = np.roots([P4, P3, P2, P1, P0])  # z array
-            # there may be no solutions
-            z = z[np.isreal(z)]
-            if z.size != 0:
-                y0 = np.sqrt(np.square(z)+1)
-                stheta1 = 1/y0
-                stheta1 = stheta1[np.abs(stheta1) <= 1/a]
-                # try to see if there must be a unique solution - math theorem
-                zw[k] = np.arcsin(stheta1)
-            else:
-                # if no solution, calculate delay like SAFT
-                z = d2[j] + d1 - foc
-                delay_t = (2/Cw)*np.sqrt(aa**2 + np.square(z))
-                zi = np.abs(np.round(delay_t/tstep)).astype(int)
+            zw[k] = thetas[np.abs(approxf(thetas, aa[k], d2[j])).argmin()]
             k += 1
         zw = np.sin(zw)
         zw[zw >= 1/a] = 1/a
