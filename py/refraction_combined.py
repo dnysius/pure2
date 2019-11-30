@@ -105,8 +105,8 @@ def main(lat_pix: int) -> None:  # lat_pix is imaging x coord
 #                dt[k]: float = (2/Cw)*np.sqrt(aa[k]**2 + z**2) + 2*foc/Cw
             k += 1
         zi = np.round(dt/tstep).astype(int)  # delayed t (indices)
-        IMAGE[j, lat_pix] = np.sum(varr[zi[zi < lenT],
-                                   trans_index[zi < lenT]])
+        IMAGE[j, lat_pix] = np.sum(varr[zi[(zi < lenT)*(zi > 0)],
+                                   trans_index[(zi < lenT)*(zi > 0)]])
         j += 1
     return None
 
