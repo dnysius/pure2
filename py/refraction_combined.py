@@ -27,8 +27,8 @@ directory_path = "C:\\Users\\indra\\Documents\\GitHub"
 min_step = 6e-4
 SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
-LEFT: int = 0
-RIGHT: int = 175
+imgL: int = 50
+imgR: int = 140
 Cw = 1498  # speed of sound in Water
 Cm = 6320  # speed of sound in Metal
 a = Cm/Cw  # ratio between two speeds of sound
@@ -60,79 +60,106 @@ ZERO: int = find_nearest(tarr[:, 0], 0)
 d2_start: int = SAMPLE_START - ZERO
 d2_end: int = SAMPLE_END - ZERO
 T = tarr[ZERO:, 0]  # 1D, time columns all the same
-V = np.copy(varr[ZERO:, LEFT:RIGHT])  # ZERO'd & sample width
+V = np.copy(varr[ZERO:, :])  # ZERO'd & sample width
 tstep: float = np.abs(np.mean(T[1:]-T[:-1]))  # average timestep
 d1 = T[d2_start]*Cw/2.  # distance to sample
 d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample grid (y distance)
+d1 -= foc
 L = varr.shape[1]  # number of transducer positions
 lenT = len(T)  # length of time from ZERO to end of array
 lend2: int = d2_end-d2_start  # sample thickness
-IMAGE = np.empty((lend2, RIGHT-LEFT))  # empty final image array
+IMAGE = np.empty((lend2, L))  # empty final image array
 transducer_positions = np.linspace(-L/2, L/2, L)*min_step
 trans_index = np.arange(0, L, 1)  # transducer positions indices
 
 
-def main(lat_pix: int) -> None:  # lat_pix is imaging x coord
+def refr(lat_pix: int) -> None:  # lat_pix is imaging x coord
     j: int = 0  # imaging pixel (time axis)
     dt = np.zeros(L)  # delayed time from imaging pixel to transducer position
     while j < lend2:
         aa = np.abs(transducer_positions - transducer_positions[lat_pix])
         k: int = 0  # angles b/n transducer IMAGEion and imaging pixel
         while k < L:
-            P4 = aa[k]**2
-            P3 = -2*d1*aa[k]
-            P2 = (aa[k]**2-aa[k]**2*a**2+d1**2-a**2*d2[j]**2)
-            P1 = 2*d1*aa[k]*(a**2-1)
-            P0 = d1**2*(1-a**2)
-            roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
-            roots = np.real(roots[np.isreal(roots)])
-#            SAFT = False
-            if roots.size != 0:
-                y0 = np.sqrt(np.square(roots) + 1)
-                stheta1 = 1./y0
-                st1 = stheta1[np.abs(stheta1) <= 1/a]
-                if st1.size > 0:
-                    stheta1 = np.max(np.abs(st1))
-                    rad1 = np.arcsin(stheta1)  # theta_1
-                    rad2 = np.arcsin(stheta1*a)  # theta_2
-                    dt[k]: float = 2*(np.abs(d1/Cw/np.cos(rad1))
-                                      + np.abs(d2[j]/Cm/np.cos(rad2)))
-#                else:
-#                    SAFT = True
-            # if no roots found, calculate delay like SAFT
-#            if (roots.size == 0) or (SAFT is True):
-#                z: float = d2[j] + d1 - foc
-#                dt[k]: float = (2/Cw)*np.sqrt(aa[k]**2 + z**2) + 2*foc/Cw
+            if d2[j] != 0 and aa[k] != 0:
+                P4 = aa[k]**2
+                P3 = -2*d1*aa[k]
+                P2 = (aa[k]**2-aa[k]**2*a**2+d1**2-a**2*d2[j]**2)
+                P1 = 2*d1*aa[k]*(a**2-1)
+                P0 = d1**2*(1-a**2)
+                roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
+                roots = np.real(roots[np.isreal(roots)])
+                if roots.size != 0:
+                    y0 = np.sqrt(np.square(roots) + 1)
+                    stheta1 = 1./y0
+                    st1 = stheta1[np.abs(stheta1) <= 1/a]
+                    if st1.size > 0:
+                        stheta1 = np.min(np.abs(st1))
+                        rad1 = np.arcsin(stheta1)  # theta_1
+                        rad2 = np.arcsin(stheta1*a)  # theta_2
+                        dt[k]: float = 2*(np.abs(d1/Cw/np.cos(rad1))
+                                          + np.abs(d2[j]/Cm/np.cos(rad2))
+                                          + foc/Cw)
+            elif aa[k] == 0 and d2[j] != 0:
+                dt[k] = 2*(d1/Cw + d2[j]/Cm + foc/Cw)
+            elif aa[k] == 0 and d2[j] == 0:
+                dt[k] = 2*(d1/Cw + foc/Cw)
             k += 1
         zi = np.round(dt/tstep).astype(int)  # delayed t (indices)
-        IMAGE[j, lat_pix] = np.sum(varr[zi[(zi < lenT)*(zi > 0)],
-                                   trans_index[(zi < lenT)*(zi > 0)]])
+        IMAGE[j, lat_pix-imgL] = np.sum(V[zi[zi < lenT],
+                                        trans_index[zi < lenT]])
+        j += 1
+    return None
+
+
+def saft(lat_pix):
+    # use saft for outside sample range (when img pixel is not supposed to
+    # be in the metal)
+    dt = np.zeros(L)  # delayed time: imaging pixel to transducer
+    aa = np.abs(transducer_positions - transducer_positions[lat_pix])
+    j = 0
+    while j < lend2:
+        z: float = d2[j] + d1
+        dt: float = (2/Cw)*np.sqrt(aa[:]**2 + z**2) + 2*foc/Cw
+        zi = np.round(dt/tstep).astype(int)  # delayed t (indices)
+        IMAGE[j, lat_pix] = np.sum(V[zi[zi < lenT],
+                                   trans_index[zi < lenT]])
         j += 1
     return None
 
 
 if __name__ == '__main__':
-    # Parallel processing
     start_time = perf_counter_ns()*1e-9
     jobs = []
     print("Append")
-    for i in range(LEFT, RIGHT, 1):
-        jobs.append(threading.Thread(target=main, args=(i,)))
+    for i in range(L):
+        if i >= imgL and i < imgR:
+            jobs.append(threading.Thread(target=refr, args=(i,)))
+        else:
+            jobs.append(threading.Thread(target=saft, args=(i,)))
     print("Starting")
     for job in jobs:
         job.start()
     print("Joining")
+    count = 0
     for job in jobs:
+        if count == 0:
+            t0 = perf_counter_ns()*1e-9
+        elif count % 10 == 0 and count != 0:
+            dt = perf_counter_ns()*1e-9-t0
+            t0 = perf_counter_ns()*1e-9
+            print("joining job {0}/{1}".format(count, L))
+            print("previous job took {}s".format(dt))
         job.join()
+        count += 1
     print("Stitching")
-    V[d2_start:d2_end, :] = IMAGE[:, :]
-#    varr[SAMPLE_START:SAMPLE_END, LEFT:RIGHT] = IMAGE[:, :]
+    V[d2_start:d2_end, imgL:imgR] = IMAGE[:, :]
+#    varr[SAMPLE_START:SAMPLE_END, imgL:imgR] = IMAGE[:, :]
 #    V_filtered = np.abs(hilbert(V[:, :], axis=0))
-    V_path = open(join(ARR_FOL, "comb-thread-V-{}.pkl"
+    V_path = open(join(ARR_FOL, "comb-V-{}.pkl"
                        .format(FOLDER_NAME)), "wb")
-    T_path = open(join(ARR_FOL, "comb-thread-T-{}.pkl"
+    T_path = open(join(ARR_FOL, "comb-T-{}.pkl"
                        .format(FOLDER_NAME)), "wb")
-    V_npy_path = open(join(ARR_FOL, "comb-thread-fullview-{}.npy"
+    V_npy_path = open(join(ARR_FOL, "comb-fullview-{}.npy"
                       .format(FOLDER_NAME)), "wb")
     pickle.dump(V, V_path)
     pickle.dump(T, T_path)
@@ -140,13 +167,12 @@ if __name__ == '__main__':
     duration = perf_counter_ns()*1e-9-start_time
     print(duration)
     fig = plt.figure(figsize=[10, 10])
-    plt.imshow(varr[SAMPLE_START:SAMPLE_END, LEFT:RIGHT], aspect='auto', cmap='gray')
+    plt.imshow(varr[SAMPLE_START:SAMPLE_END, imgL:imgR], aspect='auto', cmap='gray')
     plt.colorbar()
-    plt.title("{}
-    b-scan".format(FOLDER_NAME))
+    plt.title("{} b-scan".format(FOLDER_NAME))
     plt.show()
     fig = plt.figure(figsize=[10, 10])
-    plt.imshow(V[d2_start:d2_end, :], aspect='auto', cmap='gray')
+    plt.imshow(V[d2_start:d2_end, imgL:imgR], aspect='auto', cmap='gray')
     plt.colorbar()
     plt.title("{} combined".format(FOLDER_NAME))
     plt.show()
