@@ -146,7 +146,7 @@ def refr(j):
 if __name__ == '__main__':
     start_time = perf_counter_ns()*1e-9
     dstep = tstep*Cw/2
-    layer = 1
+    layer = 1000
     zi_saft = saft(layer)
     zi_root = roots(layer)
     zi_refr = refr(layer)

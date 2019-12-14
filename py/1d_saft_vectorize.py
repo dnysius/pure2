@@ -4,8 +4,7 @@
 since we need solver(k, j, i)
 2.
 '''
-from numba import vectorize, int64, complex64, complex128, float64, float32
-from numba import njit
+from numba import vectorize
 import numpy as np
 from os import getcwd
 from os.path import join, dirname
@@ -24,7 +23,6 @@ min_step = 6e-4
 #imgR: int = 140
 SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
-#SAMPLE_END: int = SAMPLE_START + 600
 imgL: int = 0
 imgR: int = 200
 Cw = 1498  # speed of sound in Water
@@ -65,51 +63,34 @@ d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample column (y distance)
 d1 -= foc
 
 L = varr.shape[1]  # scanning width (positions)
-#imgR = L
+# imgR = L
 dY: int = d2_end-d2_start  # sample thickness
 dX = imgR-imgL
 lenT = len(T)  # length of time from ZERO to end of array
 N = dY*dX
 trans = np.linspace(-dX/2, dX/2, dX)*min_step
-crit_angle = np.arcsin(1/a)
-theta1s = np.linspace(0, crit_angle, int(1e5), dtype=np.float32)
-stheta2s = a*np.sin(theta1s)
-stheta2s[stheta2s >= 1] = 1
-theta2s = np.arcsin(stheta2s)
 
 
 @vectorize(['float64(int64)'], target='parallel')
-def refr(c):  # lat_pix is imaging x coord
+def saft(c):
+    # c is the impix coordinate
     i = c % dX  # x-coord of impix
-    j = c // dX  # y-coord of impix
-    dt = np.zeros(dX)  # delayed time: imaging pixel to transducer position
+    j = c // dX  # y-coord of impixz
     aa = np.abs(trans - trans[i])
+    z: float = d2[j] + d1
+    dt = (2/Cw)*np.sqrt(aa[:]**2 + z**2) + 2*foc/Cw
     res = 0
-    for k in range(dX):
-        if d2[j] != 0 and aa[k] != 0:
-            stheta1 = np.abs(d1*np.tan(theta1s)
-                             + d2[j]*np.tan(theta2s)
-                             - aa[k]).argmin()
-            if stheta1 <= 1/a:
-                rad1 = np.arcsin(stheta1)  # theta_1
-                rad2 = np.arcsin(stheta1*a)  # theta_2
-                dt[k]: float = 2*(np.abs(d1/Cw/np.cos(rad1))
-                                  + np.abs(d2[j]/Cm/np.cos(rad2))
-                                  + foc/Cw)
-        elif aa[k] == 0 and d2[j] != 0:
-            dt[k] = 2*(d1/Cw + d2[j]/Cm + foc/Cw)
-        elif aa[k] == 0 and d2[j] == 0:
-            dt[k] = 2*(d1/Cw + foc/Cw)
+    for k in range(len(dt)):
         t = int(np.round(dt[k]/tstep))  # delayed t (indices)
         if t < lenT:
             res += V[t, k]
     return res
 
 
-def plt_refr():
+def plt_saft():
     start_time = perf_counter_ns()*1e-9
     impix = np.arange(N)
-    p = refr(impix)
+    p = saft(impix)
     POST = p.reshape((dY, dX))
     duration = perf_counter_ns()*1e-9-start_time
     print(duration)
@@ -121,7 +102,7 @@ def plt_refr():
     plt.figure(figsize=[10, 10])
     plt.imshow(V[d2_start:d2_end, imgL:imgR], aspect='auto', cmap='gray')
     plt.colorbar()
-    plt.title("{} vectorized refraction ".format(FOLDER_NAME))
+    plt.title("{} vectorized SAFT".format(FOLDER_NAME))
     plt.show()
 
 
