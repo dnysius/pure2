@@ -61,16 +61,13 @@ T = tarr[ZERO:, 0]  # 1D, time columns all the same
 V = np.copy(varr[ZERO:, :])  # ZERO'd & sample width
 tstep: float = np.abs(np.mean(T[1:]-T[:-1]))  # average timestep
 d1 = T[d2_start]*Cw/2.  # distance to sample
-d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample grid (y distance)
+d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample column (y distance)
 d1 -= foc
 
-L = varr.shape[1]  # number of transducer positions
-#dY: int = d2_end-d2_start  # sample thickness
+L = varr.shape[1]  # scanning width (positions)
+dY: int = d2_end-d2_start  # sample thickness
 dX = imgR-imgL
-dY = SAMPLE_END-SAMPLE_START
 lenT = len(T)  # length of time from ZERO to end of array
-#IMAGE = np.empty((dY, dX))  # empty final image array
-trans_index = np.arange(0, dX, 1)  # transducer positions indices
 N = dY*dX
 trans = np.linspace(-dX/2, dX/2, dX)*min_step
 crit_angle = np.arcsin(1/a)
@@ -78,12 +75,6 @@ theta1s = np.linspace(0, crit_angle, int(1e5), dtype=np.float32)
 stheta2s = a*np.sin(theta1s)
 stheta2s[stheta2s >= 1] = 1
 theta2s = np.arcsin(stheta2s)
-
-#
-#@njit()
-#def approxf(aa, d2):
-#    # the nonlinear function, x : theta1
-#    return d1*np.tan(theta1s) + d2*np.tan(theta2s) - aa
 
 
 @vectorize(['float64(int64)'], target='parallel')
@@ -95,20 +86,6 @@ def refr(c):  # lat_pix is imaging x coord
     res = 0
     for k in range(dX):
         if d2[j] != 0 and aa[k] != 0:
-#            P4 = aa[k]**2
-#            P3 = -2*d1*aa[k]
-#            P2 = (aa[k]**2-aa[k]**2*a**2+d1**2-a**2*d2[j]**2)
-#            P1 = 2*d1*aa[k]*(a**2-1)
-#            P0 = d1**2*(1-a**2)
-#            pol = np.array([P4, P3, P2, P1, P0])
-#            sol = np.abs(np.roots(pol))  # theta 1
-#            root = 0
-#            for s in sol:
-#                x = P4*s**4 + P3*s**3 + P2*s**2 + P1*s + P0
-#                if x < 1e-6 and s >= root:
-#                    root = s
-#            y0 = np.sqrt(np.square(root) + 1)
-#            stheta1 = 1./y0
             stheta1 = np.abs(d1*np.tan(theta1s)
                              + d2[j]*np.tan(theta2s)
                              - aa[k]).argmin()
@@ -131,11 +108,8 @@ def refr(c):  # lat_pix is imaging x coord
 @vectorize(['float64(int64)'], target='parallel')
 def saft(c):
     # c is the impix coordinate
-    # use saft for outside sample range (when img pixel is not supposed to
-    # be in the metal)
     i = c % dX  # x-coord of impix
     j = c // dX  # y-coord of impixz
-#    dt = np.zeros(dX)  # delayed time: imaging pixel to transducer
     aa = np.abs(trans - trans[i])
     z: float = d2[j] + d1
     dt = (2/Cw)*np.sqrt(aa[:]**2 + z**2) + 2*foc/Cw
@@ -144,7 +118,6 @@ def saft(c):
         t = int(np.round(dt[k]/tstep))  # delayed t (indices)
         if t < lenT:
             res += V[t, k]
-#    return np.sum(V[zi[zi < lenT], trans_index[zi < lenT]])
     return res
 
 
