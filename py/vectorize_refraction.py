@@ -4,7 +4,7 @@
 since we need solver(k, j, i)
 2.
 '''
-from numba import vectorize, int64, complex64, complex128, float64, float32
+from numba import vectorize
 from numba import njit
 import numpy as np
 from os import getcwd
@@ -23,8 +23,8 @@ min_step = 6e-4
 #imgL: int = 50
 #imgR: int = 140
 SAMPLE_START: int = 31500
-SAMPLE_END: int = 33000
-#SAMPLE_END: int = SAMPLE_START + 600
+#SAMPLE_END: int = 33000
+SAMPLE_END: int = SAMPLE_START + 2
 imgL: int = 0
 imgR: int = 200
 Cw = 1498  # speed of sound in Water
@@ -78,8 +78,9 @@ stheta2s[stheta2s >= 1] = 1
 theta2s = np.arcsin(stheta2s)
 
 
-@vectorize(['float64(int64)'], target='parallel')
-def refr(c):  # lat_pix is imaging x coord
+#@vectorize(['float64(int64)'], target='parallel')
+@njit()
+def refr():  # lat_pix is imaging x coord
     i = c % dX  # x-coord of impix
     j = c // dX  # y-coord of impix
     dt = np.zeros(dX)  # delayed time: imaging pixel to transducer position
@@ -126,4 +127,4 @@ def plt_refr():
 
 
 if __name__ == '__main__':
-    plt_saft()
+    plt_refr()

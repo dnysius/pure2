@@ -146,15 +146,15 @@ def refr(j):
 if __name__ == '__main__':
     start_time = perf_counter_ns()*1e-9
     dstep = tstep*Cw/2
-    layer = 1000
+    layer = 50
     zi_saft = saft(layer)
     zi_root = roots(layer)
     zi_refr = refr(layer)
 #    zi = (zi_refr-zi_saft)[(zi_saft>0)*(zi_refr>0)]  # refr>saft
     plt.figure(figsize=[10, 10])
-    plt.plot(zi_saft, label='saft')
-    plt.plot(zi_refr, label='refr')
-    plt.plot(zi_root, label='root')
+    plt.plot(zi_saft, label='saft', ls=':')
+    plt.plot(zi_refr, label='argmin', c='goldenrod',ls='--')
+    plt.plot(zi_root, label='root', ls=':', c='blue', lw=3, alpha=.5)
     plt.title("2e5 points, imaging pix at 0")
     plt.xlabel("x-coord")
     plt.ylabel("time delay (index)")
