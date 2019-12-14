@@ -27,6 +27,7 @@ directory_path = "C:\\Users\\indra\\Documents\\GitHub"
 min_step = 6e-4
 SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
+SAMPLE_END: int = SAMPLE_START + 600
 imgL: int = 50
 imgR: int = 140
 Cw = 1498  # speed of sound in Water
@@ -105,8 +106,8 @@ def refr(lat_pix: int) -> None:  # lat_pix is imaging x coord
                 dt[k] = 2*(d1/Cw + foc/Cw)
             k += 1
         zi = np.round(dt/tstep).astype(int)  # delayed t (indices)
-        IMAGE[j, lat_pix-imgL] = np.sum(V[zi[zi < lenT],
-                                        trans_index[zi < lenT]])
+        IMAGE[j, lat_pix] = np.sum(V[zi[zi < lenT],
+                                   trans_index[zi < lenT]])
         j += 1
     return None
 
@@ -131,7 +132,8 @@ if __name__ == '__main__':
     start_time = perf_counter_ns()*1e-9
     jobs = []
     print("Append")
-    for i in range(L):
+    for i in range(imgL, imgR, 1):
+#        jobs.append(threading.Thread(target=refr, args=(i,)))
         if i >= imgL and i < imgR:
             jobs.append(threading.Thread(target=refr, args=(i,)))
         else:
@@ -152,18 +154,19 @@ if __name__ == '__main__':
         job.join()
         count += 1
     print("Stitching")
-    V[d2_start:d2_end, imgL:imgR] = IMAGE[:, :]
+    V[d2_start:d2_end, imgL:imgR] = IMAGE[:, imgL:imgR]
 #    varr[SAMPLE_START:SAMPLE_END, imgL:imgR] = IMAGE[:, :]
 #    V_filtered = np.abs(hilbert(V[:, :], axis=0))
-    V_path = open(join(ARR_FOL, "comb-V-{}.pkl"
-                       .format(FOLDER_NAME)), "wb")
-    T_path = open(join(ARR_FOL, "comb-T-{}.pkl"
-                       .format(FOLDER_NAME)), "wb")
-    V_npy_path = open(join(ARR_FOL, "comb-fullview-{}.npy"
-                      .format(FOLDER_NAME)), "wb")
-    pickle.dump(V, V_path)
-    pickle.dump(T, T_path)
-    np.save(V_npy_path, varr, allow_pickle=False)
+
+#    V_path = open(join(ARR_FOL, "comb-V-{}.pkl"
+#                       .format(FOLDER_NAME)), "wb")
+#    T_path = open(join(ARR_FOL, "comb-T-{}.pkl"
+#                       .format(FOLDER_NAME)), "wb")
+#    V_npy_path = open(join(ARR_FOL, "comb-fullview-{}.npy"
+#                      .format(FOLDER_NAME)), "wb")
+#    pickle.dump(V, V_path)
+#    pickle.dump(T, T_path)
+#    np.save(V_npy_path, varr, allow_pickle=False)
     duration = perf_counter_ns()*1e-9-start_time
     print(duration)
     fig = plt.figure(figsize=[10, 10])
