@@ -5,6 +5,7 @@ since we need solver(k, j, i)
 2.
 '''
 from numba import vectorize, int64, complex64, complex128, float64, float32
+from numba import njit
 import numpy as np
 from os import getcwd
 from os.path import join, dirname
@@ -72,6 +73,17 @@ lenT = len(T)  # length of time from ZERO to end of array
 trans_index = np.arange(0, dX, 1)  # transducer positions indices
 N = dY*dX
 trans = np.linspace(-dX/2, dX/2, dX)*min_step
+crit_angle = np.arcsin(1/a)
+theta1s = np.linspace(0, crit_angle, int(1e5), dtype=np.float32)
+stheta2s = a*np.sin(theta1s)
+stheta2s[stheta2s >= 1] = 1
+theta2s = np.arcsin(stheta2s)
+
+#
+#@njit()
+#def approxf(aa, d2):
+#    # the nonlinear function, x : theta1
+#    return d1*np.tan(theta1s) + d2*np.tan(theta2s) - aa
 
 
 @vectorize(['float64(int64)'], target='parallel')
@@ -83,20 +95,23 @@ def refr(c):  # lat_pix is imaging x coord
     res = 0
     for k in range(dX):
         if d2[j] != 0 and aa[k] != 0:
-            P4 = aa[k]**2
-            P3 = -2*d1*aa[k]
-            P2 = (aa[k]**2-aa[k]**2*a**2+d1**2-a**2*d2[j]**2)
-            P1 = 2*d1*aa[k]*(a**2-1)
-            P0 = d1**2*(1-a**2)
-            pol = np.array([P4, P3, P2, P1, P0])
-            sol = np.roots(pol)  # theta 1
-            root = 0
-            for s in sol:
-                q = complex(s)
-                if abs(q.imag) < 1e-5 and s >= root:  # find max in sol
-                    root = abs(q)
-            y0 = np.sqrt(np.square(root) + 1)
-            stheta1 = 1./y0
+#            P4 = aa[k]**2
+#            P3 = -2*d1*aa[k]
+#            P2 = (aa[k]**2-aa[k]**2*a**2+d1**2-a**2*d2[j]**2)
+#            P1 = 2*d1*aa[k]*(a**2-1)
+#            P0 = d1**2*(1-a**2)
+#            pol = np.array([P4, P3, P2, P1, P0])
+#            sol = np.abs(np.roots(pol))  # theta 1
+#            root = 0
+#            for s in sol:
+#                x = P4*s**4 + P3*s**3 + P2*s**2 + P1*s + P0
+#                if x < 1e-6 and s >= root:
+#                    root = s
+#            y0 = np.sqrt(np.square(root) + 1)
+#            stheta1 = 1./y0
+            stheta1 = np.abs(d1*np.tan(theta1s)
+                             + d2[j]*np.tan(theta2s)
+                             - aa[k]).argmin()
             if stheta1 <= 1/a:
                 rad1 = np.arcsin(stheta1)  # theta_1
                 rad2 = np.arcsin(stheta1*a)  # theta_2
