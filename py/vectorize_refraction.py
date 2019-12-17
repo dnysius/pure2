@@ -5,7 +5,7 @@ since we need solver(k, j, i)
 2.
 '''
 from numba import vectorize
-from numba import njit
+#from numba import njit, jit
 import numpy as np
 from os import getcwd
 from os.path import join, dirname
@@ -20,13 +20,13 @@ min_step = 6e-4
 #SAMPLE_START: int = 31500
 #SAMPLE_END: int = 33000
 #SAMPLE_END: int = SAMPLE_START + 600
-#imgL: int = 50
-#imgR: int = 140
+imgL: int = 50
+imgR: int = 140
 SAMPLE_START: int = 31500
-#SAMPLE_END: int = 33000
-SAMPLE_END: int = SAMPLE_START + 2
-imgL: int = 0
-imgR: int = 200
+SAMPLE_END: int = 33000
+#SAMPLE_END: int = SAMPLE_START + 500
+#imgL: int = 0
+#imgR: int = 300
 Cw = 1498  # speed of sound in Water
 Cm = 6320  # speed of sound in Metal
 a = Cm/Cw  # ratio between two speeds of sound
@@ -65,45 +65,94 @@ d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample column (y distance)
 d1 -= foc
 
 L = varr.shape[1]  # scanning width (positions)
-#imgR = L
 dY: int = d2_end-d2_start  # sample thickness
 dX = imgR-imgL
 lenT = len(T)  # length of time from ZERO to end of array
 N = dY*dX
-trans = np.linspace(-dX/2, dX/2, dX)*min_step
-crit_angle = np.arcsin(1/a)
-theta1s = np.linspace(0, crit_angle, int(1e5), dtype=np.float32)
-stheta2s = a*np.sin(theta1s)
-stheta2s[stheta2s >= 1] = 1
-theta2s = np.arcsin(stheta2s)
+trans = np.arange(L)*min_step
+aa = trans - trans[0]
+td_arr = np.empty((dY, L))
 
 
-#@vectorize(['float64(int64)'], target='parallel')
-@njit()
-def refr():  # lat_pix is imaging x coord
-    i = c % dX  # x-coord of impix
-    j = c // dX  # y-coord of impix
-    dt = np.zeros(dX)  # delayed time: imaging pixel to transducer position
-    aa = np.abs(trans - trans[i])
+def determine_total_distance(j):
+    # given impix coordinate (leftmost), generate array (corresponding
+    # to transducers from one impix) with total travelling distance
+    # j: impix d2 height in sample, x-coord is at index 0
+    dt = np.zeros(L)
+    for k in range(L):
+        d2j = d2[j]
+        aak = aa[k]
+        if aa[k] != 0 and d2[j] != 0:
+            P4 = aak**2
+            P3 = -2*d1*aak
+            P2 = (aak**2-aak**2*a**2+d1**2-a**2*d2j**2)
+            P1 = 2*d1*aak*(a**2-1)
+            P0 = d1**2*(1-a**2)
+            roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
+            roots = np.abs(roots[np.imag(roots) < 1e-7])
+            if len(roots) != 0:
+                y0 = np.sqrt(np.square(roots) + 1)
+                stheta1 = 1./y0
+                st1 = stheta1[np.abs(stheta1) <= 1/a]
+                if len(st1) != 0:
+                    stheta1 = np.min(np.abs(st1))
+                    rad1 = np.arcsin(stheta1)  # theta_1
+                    rad2 = np.arcsin(stheta1*a)  # theta_2
+                    dt[k] = int(np.round(2*(np.abs(d1/Cw/np.cos(rad1))
+                                         + np.abs(d2j/Cm/np.cos(rad2))
+                                         + foc/Cw)/tstep))
+        elif d2[j] != 0 and aak == 0:
+            d = 2*(d1/Cw + d2j/Cm + foc/Cw)
+            dt[k] = int(np.round(d/tstep))
+        elif d2[j] == 0:
+            d = (2/Cw)*(np.sqrt(d1**2 + aak**2) + foc)
+            dt[k] = int(np.round(d/tstep))
+    return dt[:]
+
+
+def create_td_arr():
+    start_time = perf_counter_ns()*1e-9
+    for j in range(dY):
+        td_arr[j, :] = determine_total_distance(j)
+    duration = perf_counter_ns()*1e-9-start_time
+    np.save(join(ARR_FOL, 'td_arr.npy'), td_arr, allow_pickle=False)
+    print(duration)
+    return td_arr
+
+
+def load_td_arr():
+    td = np.load(join(ARR_FOL, 'td_arr.npy'))
+    return td
+
+
+#td_arr = create_td_arr()
+td_arr = load_td_arr()
+
+#
+#def create_comb():
+#    comb = np.empty((dY+V.shape[0], L))
+#    comb[:dY, :] = td_arr  # td_arr on top
+#    comb[dY:, :] = V
+#    comb = np.array(comb)
+#    np.save(join(ARR_FOL, 'comb.npy'), comb, allow_pickle=False)
+#    return comb
+#
+#
+##comb = create_comb()
+#comb = np.load(join(ARR_FOL, 'comb.npy'))
+
+
+@vectorize(['float64(int64)'], target='parallel')
+def refr(c):
+    i = int(c % dX)  # x-coord of impix
+    j = int(c // dX)  # y-coord of impix
     res = 0
-    for k in range(dX):
-        if d2[j] != 0 and aa[k] != 0:
-            stheta1 = np.abs(d1*np.tan(theta1s)
-                             + d2[j]*np.tan(theta2s)
-                             - aa[k]).argmin()
-            if stheta1 <= 1/a:
-                rad1 = np.arcsin(stheta1)  # theta_1
-                rad2 = np.arcsin(stheta1*a)  # theta_2
-                dt[k]: float = 2*(np.abs(d1/Cw/np.cos(rad1))
-                                  + np.abs(d2[j]/Cm/np.cos(rad2))
-                                  + foc/Cw)
-        elif aa[k] == 0 and d2[j] != 0:
-            dt[k] = 2*(d1/Cw + d2[j]/Cm + foc/Cw)
-        elif aa[k] == 0 and d2[j] == 0:
-            dt[k] = 2*(d1/Cw + foc/Cw)
-        t = int(np.round(dt[k]/tstep))  # delayed t (indices)
+    for k in range(L):
+        m = abs(i-k)
+        t = int(td_arr[j, m])  # delayed t index
         if t < lenT:
-            res += V[t, k]
+            d = abs(float(V[t, k]))
+            res += d
     return res
 
 
@@ -124,7 +173,9 @@ def plt_refr():
     plt.colorbar()
     plt.title("{} vectorized refraction ".format(FOLDER_NAME))
     plt.show()
+    return POST
 
 
 if __name__ == '__main__':
-    plt_refr()
+    POST = plt_refr()
+#    pass

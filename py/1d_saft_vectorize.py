@@ -83,7 +83,7 @@ def saft(c):
     for k in range(len(dt)):
         t = int(np.round(dt[k]/tstep))  # delayed t (indices)
         if t < lenT:
-            res += V[t, k]
+            res += abs(float(V[t, k]))
     return res
 
 
@@ -97,12 +97,12 @@ def plt_saft():
     plt.figure(figsize=[10, 10])
     plt.imshow(POST, aspect='auto', cmap='gray')
     plt.colorbar()
-    plt.title("{} combined".format(FOLDER_NAME))
+    plt.title("{} vectorized SAFT".format(FOLDER_NAME))
     plt.show()
     plt.figure(figsize=[10, 10])
     plt.imshow(V[d2_start:d2_end, imgL:imgR], aspect='auto', cmap='gray')
     plt.colorbar()
-    plt.title("{} vectorized SAFT".format(FOLDER_NAME))
+    plt.title("{} B-scan".format(FOLDER_NAME))
     plt.show()
 
 
