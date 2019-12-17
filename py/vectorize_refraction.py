@@ -21,11 +21,11 @@ min_step = 6e-4
 #SAMPLE_START: int = 31500
 #SAMPLE_END: int = 33000
 #SAMPLE_END: int = SAMPLE_START + 600
-imgL: int = 50
+imgL: int = 0
 imgR: int = 150
 SAMPLE_START: int = 31500
-SAMPLE_END: int = 33000
-#SAMPLE_END: int = SAMPLE_START + 500
+#SAMPLE_END: int = 33000
+SAMPLE_END: int = SAMPLE_START + 200
 #imgL: int = 0
 #imgR: int = 300
 Cw = 1498  # speed of sound in Water
@@ -95,21 +95,12 @@ def g(t, d2j, dx):
 
 
 '''
-P4 = aak**2
-P3 = -2*d1*aak
-P2 = (aak**2-aak**2*a**2+d1**2-a**2*d2j**2)
-P1 = 2*d1*aak*(a**2-1)
-P0 = d1**2*(1-a**2)
-roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
-roots = np.abs(roots[np.imag(roots) < 1e-7])
-if len(roots) != 0:
-    y0 = np.sqrt(np.square(roots) + 1)
-    stheta1 = 1./y0
-    st1 = stheta1[np.abs(stheta1) <= 1/a]
-    if len(st1) != 0:
-        stheta1 = np.min(np.abs(st1))
-        rad1 = np.arcsin(stheta1)  # theta_1
-        rad2 = np.arcsin(stheta1*a)  # theta_2
+s = fsolve(g, 0, args=(d2j, aak), maxfev=10)
+                rad1 = np.min(s)
+                rad2 = np.arcsin(a*np.sin(rad1))
+                dt[k] = int(np.round(2*(np.abs(d1/Cw/np.cos(rad1))
+                                        + np.abs(d2j/Cm/np.cos(rad2))
+                                        + foc/Cw)/tstep))
 
 '''
 
@@ -121,21 +112,41 @@ def determine_total_distance(j):
     for k in range(L):
         d2j = d2[j]
         aak = aa[k]
-#        if aak != 0 and d2j != 0:
-        try:
-            s = fsolve(g, 0, args=(d2j, aak), maxfev=10)
-            rad1 = np.min(s)
-            rad2 = np.arcsin(a*np.sin(rad1))
-            dt[k] = int(np.round(2*(np.abs(d1/Cw/np.cos(rad1))
-                                    + np.abs(d2j/Cm/np.cos(rad2))
-                                    + foc/Cw)/tstep))
-        except:
-            if d2j != 0 and aak == 0:
-                d = 2*(d1/Cw + d2j/Cm + foc/Cw)
-                dt[k] = int(np.round(d/tstep))
-            elif d2j == 0:
-                d = (2/Cw)*(np.sqrt(d1**2 + aak**2) + foc)
-                dt[k] = int(np.round(d/tstep))
+        if d2j == 0:
+            d = (2/Cw)*(np.sqrt((d1+d2j)**2 + aak**2) + foc)
+            dt[k] = int(np.round(d/tstep))
+        elif d2j != 0 and aak == 0:
+            d = 2*(d1/Cw + d2j/Cm + foc/Cw)
+            dt[k] = int(np.round(d/tstep))
+        elif aak != 0 and d2j != 0:
+            P4 = aak**2
+            P3 = -2*d1*aak
+            P2 = (aak**2-aak**2*a**2+d1**2-a**2*d2j**2)
+            P1 = 2*d1*aak*(a**2-1)
+            P0 = d1**2*(1-a**2)
+            saft_angle = np.abs(np.arctan(aak/(d2j+d1)))
+            roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
+            roots = np.abs(roots[np.imag(roots) < 1e-7])
+            if len(roots) != 0:
+                y0 = np.sqrt(np.square(roots) + 1)
+                stheta1 = 1./y0
+                st1 = stheta1[np.abs(stheta1) <= 1/a]
+                if len(st1) > 1:
+                    stheta1 = st1[np.abs(saft_angle - st1).argmin()]
+                    rad1 = np.arcsin(stheta1)  # theta_1
+                    rad2 = np.arcsin(stheta1*a)  # theta_2
+                    dt[k] = int(np.round(2*(np.abs(d1/Cw/np.cos(rad1))
+                                         + np.abs(d2j/Cm/np.cos(rad2))
+                                         + foc/Cw)/tstep))
+                elif len(st1) == 1:
+                    stheta1 = st1[0]
+                    rad1 = np.arcsin(stheta1)  # theta_1
+                    rad2 = np.arcsin(stheta1*a)  # theta_2
+                    dt[k] = int(np.round(2*(np.abs(d1/Cw/np.cos(rad1))
+                                         + np.abs(d2j/Cm/np.cos(rad2))
+                                         + foc/Cw)/tstep))
+                elif len(st1) == 0:
+                    roots = []
     return dt[:]
 
 
@@ -144,7 +155,7 @@ def create_td_arr():
     for j in range(dY):
         td_arr[j, :] = determine_total_distance(j)
     duration = perf_counter_ns()*1e-9-start_time
-    np.save(join(ARR_FOL, 'td_arr.npy'), td_arr, allow_pickle=False)
+#    np.save(join(ARR_FOL, 'td_arr.npy'), td_arr, allow_pickle=False)
     print(duration)
     return td_arr
 
@@ -168,7 +179,7 @@ def refr(c):
         m = abs(i-k)
         t = int(td_arr[j, m])  # delayed t index
         if t < d2_end:
-            d = abs(float(V[t, k]))
+            d = float(V[t, k])
             res += d
     return res
 
