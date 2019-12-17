@@ -7,6 +7,7 @@ since we need solver(k, j, i)
 from numba import vectorize
 #from numba import njit, jit
 import numpy as np
+from scipy.optimize import fsolve
 from os import getcwd
 from os.path import join, dirname
 from time import perf_counter_ns
@@ -20,8 +21,8 @@ min_step = 6e-4
 #SAMPLE_START: int = 31500
 #SAMPLE_END: int = 33000
 #SAMPLE_END: int = SAMPLE_START + 600
-imgL: int = 0
-imgR: int = 140
+imgL: int = 50
+imgR: int = 150
 SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
 #SAMPLE_END: int = SAMPLE_START + 500
@@ -64,15 +65,53 @@ d1 = T[d2_start]*Cw/2.  # distance to sample
 d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample column (y distance)
 d1 -= foc
 
-L = varr.shape[1]  # scanning width (positions)
 dY: int = d2_end-d2_start  # sample thickness
 dX = imgR-imgL
+L = varr.shape[1]  # scanning width (positions)
 lenT = len(T)  # length of time from ZERO to end of array
 N = dY*dX
 trans = np.arange(L)*min_step
 aa = trans - trans[0]
 td_arr = np.empty((dY, L))
+crit_angle = np.arcsin(1/a)
 
+
+def f(t, d2j, dx):
+    # dx is aa or L in the equation
+    # t is theta
+    A = dx**2
+    B = -2*d1*dx
+    C = dx**2-dx**2*a*2+d1**2-a**2*d2j**2
+    D = 2*d1*dx*(a**2-1)
+    E = d1**2-d1**2*a**2
+    return A*t**4 + B*t**3 + C*t**2 + D*t + E
+
+
+def g(t, d2j, dx):
+    if t >= crit_angle:
+        t = crit_angle
+    t2 = np.abs(np.arcsin(a*np.sin(t)))
+    return d2j*np.tan(t2) + d1*np.tan(t) - dx
+
+
+'''
+P4 = aak**2
+P3 = -2*d1*aak
+P2 = (aak**2-aak**2*a**2+d1**2-a**2*d2j**2)
+P1 = 2*d1*aak*(a**2-1)
+P0 = d1**2*(1-a**2)
+roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
+roots = np.abs(roots[np.imag(roots) < 1e-7])
+if len(roots) != 0:
+    y0 = np.sqrt(np.square(roots) + 1)
+    stheta1 = 1./y0
+    st1 = stheta1[np.abs(stheta1) <= 1/a]
+    if len(st1) != 0:
+        stheta1 = np.min(np.abs(st1))
+        rad1 = np.arcsin(stheta1)  # theta_1
+        rad2 = np.arcsin(stheta1*a)  # theta_2
+
+'''
 
 def determine_total_distance(j):
     # given impix coordinate (leftmost), generate array (corresponding
@@ -82,31 +121,21 @@ def determine_total_distance(j):
     for k in range(L):
         d2j = d2[j]
         aak = aa[k]
-        if aak != 0 and d2j != 0:
-            P4 = aak**2
-            P3 = -2*d1*aak
-            P2 = (aak**2-aak**2*a**2+d1**2-a**2*d2j**2)
-            P1 = 2*d1*aak*(a**2-1)
-            P0 = d1**2*(1-a**2)
-            roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
-            roots = np.abs(roots[np.imag(roots) < 1e-7])
-            if len(roots) != 0:
-                y0 = np.sqrt(np.square(roots) + 1)
-                stheta1 = 1./y0
-                st1 = stheta1[np.abs(stheta1) <= 1/a]
-                if len(st1) != 0:
-                    stheta1 = np.min(np.abs(st1))
-                    rad1 = np.arcsin(stheta1)  # theta_1
-                    rad2 = np.arcsin(stheta1*a)  # theta_2
-                    dt[k] = int(np.round(2*(np.abs(d1/Cw/np.cos(rad1))
-                                         + np.abs(d2j/Cm/np.cos(rad2))
-                                         + foc/Cw)/tstep))
-        elif d2j != 0 and aak == 0:
-            d = 2*(d1/Cw + d2j/Cm + foc/Cw)
-            dt[k] = int(np.round(d/tstep))
-        elif d2j == 0:
-            d = (2/Cw)*(np.sqrt(d1**2 + aak**2) + foc)
-            dt[k] = int(np.round(d/tstep))
+#        if aak != 0 and d2j != 0:
+        try:
+            s = fsolve(g, 0, args=(d2j, aak), maxfev=10)
+            rad1 = np.min(s)
+            rad2 = np.arcsin(a*np.sin(rad1))
+            dt[k] = int(np.round(2*(np.abs(d1/Cw/np.cos(rad1))
+                                    + np.abs(d2j/Cm/np.cos(rad2))
+                                    + foc/Cw)/tstep))
+        except:
+            if d2j != 0 and aak == 0:
+                d = 2*(d1/Cw + d2j/Cm + foc/Cw)
+                dt[k] = int(np.round(d/tstep))
+            elif d2j == 0:
+                d = (2/Cw)*(np.sqrt(d1**2 + aak**2) + foc)
+                dt[k] = int(np.round(d/tstep))
     return dt[:]
 
 
@@ -127,19 +156,6 @@ def load_td_arr():
 
 td_arr = create_td_arr()
 #td_arr = load_td_arr()
-
-#
-#def create_comb():
-#    comb = np.empty((dY+V.shape[0], L))
-#    comb[:dY, :] = td_arr  # td_arr on top
-#    comb[dY:, :] = V
-#    comb = np.array(comb)
-#    np.save(join(ARR_FOL, 'comb.npy'), comb, allow_pickle=False)
-#    return comb
-#
-#
-##comb = create_comb()
-#comb = np.load(join(ARR_FOL, 'comb.npy'))
 
 
 @vectorize(['float64(int64)'], target='parallel')
