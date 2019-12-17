@@ -20,7 +20,7 @@ min_step = 6e-4
 #SAMPLE_START: int = 31500
 #SAMPLE_END: int = 33000
 #SAMPLE_END: int = SAMPLE_START + 600
-imgL: int = 50
+imgL: int = 0
 imgR: int = 140
 SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
@@ -82,7 +82,7 @@ def determine_total_distance(j):
     for k in range(L):
         d2j = d2[j]
         aak = aa[k]
-        if aa[k] != 0 and d2[j] != 0:
+        if aak != 0 and d2j != 0:
             P4 = aak**2
             P3 = -2*d1*aak
             P2 = (aak**2-aak**2*a**2+d1**2-a**2*d2j**2)
@@ -101,10 +101,10 @@ def determine_total_distance(j):
                     dt[k] = int(np.round(2*(np.abs(d1/Cw/np.cos(rad1))
                                          + np.abs(d2j/Cm/np.cos(rad2))
                                          + foc/Cw)/tstep))
-        elif d2[j] != 0 and aak == 0:
+        elif d2j != 0 and aak == 0:
             d = 2*(d1/Cw + d2j/Cm + foc/Cw)
             dt[k] = int(np.round(d/tstep))
-        elif d2[j] == 0:
+        elif d2j == 0:
             d = (2/Cw)*(np.sqrt(d1**2 + aak**2) + foc)
             dt[k] = int(np.round(d/tstep))
     return dt[:]
@@ -125,8 +125,8 @@ def load_td_arr():
     return td
 
 
-#td_arr = create_td_arr()
-td_arr = load_td_arr()
+td_arr = create_td_arr()
+#td_arr = load_td_arr()
 
 #
 #def create_comb():
@@ -145,12 +145,13 @@ td_arr = load_td_arr()
 @vectorize(['float64(int64)'], target='parallel')
 def refr(c):
     i = int(c % dX)  # x-coord of impix
+    i += imgL
     j = int(c // dX)  # y-coord of impix
     res = 0
     for k in range(L):
         m = abs(i-k)
         t = int(td_arr[j, m])  # delayed t index
-        if t < lenT:
+        if t < d2_end:
             d = abs(float(V[t, k]))
             res += d
     return res

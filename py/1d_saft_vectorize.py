@@ -24,7 +24,7 @@ min_step = 6e-4
 SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
 imgL: int = 0
-imgR: int = 200
+imgR: int = 250
 Cw = 1498  # speed of sound in Water
 Cm = 6320  # speed of sound in Metal
 a = Cm/Cw  # ratio between two speeds of sound
@@ -68,21 +68,22 @@ dY: int = d2_end-d2_start  # sample thickness
 dX = imgR-imgL
 lenT = len(T)  # length of time from ZERO to end of array
 N = dY*dX
-trans = np.linspace(-dX/2, dX/2, dX)*min_step
+trans = np.arange(L)*min_step
 
 
 @vectorize(['float64(int64)'], target='parallel')
 def saft(c):
     # c is the impix coordinate
     i = c % dX  # x-coord of impix
+    i += imgL
     j = c // dX  # y-coord of impixz
     aa = np.abs(trans - trans[i])
     z: float = d2[j] + d1
     dt = (2/Cw)*np.sqrt(aa[:]**2 + z**2) + 2*foc/Cw
     res = 0
-    for k in range(len(dt)):
+    for k in range(L):
         t = int(np.round(dt[k]/tstep))  # delayed t (indices)
-        if t < lenT:
+        if t < d2_end:
             res += abs(float(V[t, k]))
     return res
 
@@ -91,7 +92,7 @@ def plt_saft():
     start_time = perf_counter_ns()*1e-9
     impix = np.arange(N)
     p = saft(impix)
-    POST = p.reshape((dY, dX))
+    POST = p.reshape((dY, dX), order='C')
     duration = perf_counter_ns()*1e-9-start_time
     print(duration)
     plt.figure(figsize=[10, 10])
