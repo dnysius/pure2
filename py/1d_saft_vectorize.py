@@ -58,6 +58,8 @@ d2_end: int = SAMPLE_END - ZERO
 T = tarr[ZERO:, 0]  # 1D, time columns all the same
 V = np.copy(varr[ZERO:, :])  # ZERO'd & sample width
 tstep: float = np.abs(np.mean(T[1:]-T[:-1]))  # average timestep
+dstep_w = Cw*tstep/2
+dstep_m = dstep_w*a
 d1 = T[d2_start]*Cw/2.  # distance to sample
 d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample column (y distance)
 d1 -= foc
@@ -69,6 +71,7 @@ dX = imgR-imgL
 lenT = len(T)  # length of time from ZERO to end of array
 N = dY*dX
 trans = np.arange(L)*min_step
+F = float(np.std(np.arange(80)))  # arange(SAMPLE WIDTH)
 
 
 @vectorize(['float64(int64)'], target='parallel')
@@ -81,16 +84,15 @@ def saft(c):
     z: float = d2[j] + d1
     dt = (2/Cw)*np.sqrt(aa[:]**2 + z**2) + 2*foc/Cw
     res = 0
-    c = float(np.std(np.arange(100)))  # arange(SAMPLE WIDTH)
-#    c = L/6
     for k in range(L):
         t = int(np.round(dt[k]/tstep))  # delayed t (indices)
-        w = np.exp((-1/2)*(i-k)**2/(c**2))
+        w = np.exp((-1/2)*(i-k)**2/(F**2))
         if t < d2_end:
             d = (abs(V[t, k]) + abs(V[t-1, k]) +
                  abs(V[t+1, k]) + abs(V[t-2, k]) +
                  abs(V[t+2, k]) + abs(V[t+3, k]) +
                  abs(V[t-3, k]))
+#            d = abs(V[t, k])
             res += float(w*d)
     return res
 
@@ -106,6 +108,7 @@ def plt_saft():
     plt.imshow(POST, aspect='auto', cmap='gray')
     plt.colorbar()
     plt.title("{} vectorized SAFT".format(FOLDER_NAME))
+#    plt.savefig(join(ARR_FOL, "vectorizedsaft.png"), dpi=600)
     plt.show()
 #    plt.figure(figsize=[10, 10])
 #    plt.imshow(V[d2_start:d2_end, imgL:imgR], aspect='auto', cmap='gray')
