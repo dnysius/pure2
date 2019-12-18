@@ -81,10 +81,17 @@ def saft(c):
     z: float = d2[j] + d1
     dt = (2/Cw)*np.sqrt(aa[:]**2 + z**2) + 2*foc/Cw
     res = 0
+    c = float(np.std(np.arange(100)))  # arange(SAMPLE WIDTH)
+#    c = L/6
     for k in range(L):
         t = int(np.round(dt[k]/tstep))  # delayed t (indices)
+        w = np.exp((-1/2)*(i-k)**2/(c**2))
         if t < d2_end:
-            res += abs(float(V[t, k]))
+            d = (abs(V[t, k]) + abs(V[t-1, k]) +
+                 abs(V[t+1, k]) + abs(V[t-2, k]) +
+                 abs(V[t+2, k]) + abs(V[t+3, k]) +
+                 abs(V[t-3, k]))
+            res += float(w*d)
     return res
 
 
@@ -100,11 +107,11 @@ def plt_saft():
     plt.colorbar()
     plt.title("{} vectorized SAFT".format(FOLDER_NAME))
     plt.show()
-    plt.figure(figsize=[10, 10])
-    plt.imshow(V[d2_start:d2_end, imgL:imgR], aspect='auto', cmap='gray')
-    plt.colorbar()
-    plt.title("{} B-scan".format(FOLDER_NAME))
-    plt.show()
+#    plt.figure(figsize=[10, 10])
+#    plt.imshow(V[d2_start:d2_end, imgL:imgR], aspect='auto', cmap='gray')
+#    plt.colorbar()
+#    plt.title("{} B-scan".format(FOLDER_NAME))
+#    plt.show()
 
 
 if __name__ == '__main__':

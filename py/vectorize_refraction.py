@@ -8,6 +8,7 @@ from numba import vectorize
 #from numba import njit, jit
 import numpy as np
 from scipy.optimize import fsolve
+from tqdm import tqdm
 from os import getcwd
 from os.path import join, dirname
 from time import perf_counter_ns
@@ -21,15 +22,16 @@ min_step = 6e-4
 #SAMPLE_START: int = 31500
 #SAMPLE_END: int = 33000
 #SAMPLE_END: int = SAMPLE_START + 600
-imgL: int = 0
-imgR: int = 150
+#imgL: int = 0
+#imgR: int = 150
 SAMPLE_START: int = 31500
 #SAMPLE_END: int = 33000
-SAMPLE_END: int = SAMPLE_START + 200
-#imgL: int = 0
-#imgR: int = 300
+SAMPLE_END: int = SAMPLE_START + 300
+imgL: int = 0
+imgR: int = 300
 Cw = 1498  # speed of sound in Water
 Cm = 6320  # speed of sound in Metal
+Cm = Cw*2
 a = Cm/Cw  # ratio between two speeds of sound
 foc = 0.0762  # metres
 ARR_FOL = join(directory_path, FOLDER_NAME)
@@ -130,7 +132,7 @@ def determine_total_distance(j):
             if len(roots) != 0:
                 y0 = np.sqrt(np.square(roots) + 1)
                 stheta1 = 1./y0
-                st1 = stheta1[np.abs(stheta1) <= 1/a]
+                st1 = np.abs(stheta1[np.abs(stheta1) <= 1/a])
                 if len(st1) > 1:
                     stheta1 = st1[np.abs(saft_angle - st1).argmin()]
                     rad1 = np.arcsin(stheta1)  # theta_1
@@ -152,16 +154,19 @@ def determine_total_distance(j):
 
 def create_td_arr():
     start_time = perf_counter_ns()*1e-9
-    for j in range(dY):
+    for j in tqdm(range(dY), desc='Creating td_arr row: '):
         td_arr[j, :] = determine_total_distance(j)
     duration = perf_counter_ns()*1e-9-start_time
-#    np.save(join(ARR_FOL, 'td_arr.npy'), td_arr, allow_pickle=False)
+    np.save(join(ARR_FOL, 'td_arr.npy'), td_arr, allow_pickle=False)
     print(duration)
     return td_arr
 
 
 def load_td_arr():
+    start_time = perf_counter_ns()*1e-9
     td = np.load(join(ARR_FOL, 'td_arr.npy'))
+    duration = perf_counter_ns()*1e-9-start_time
+    print(duration)
     return td
 
 
@@ -177,10 +182,12 @@ def refr(c):
     res = 0
     for k in range(L):
         m = abs(i-k)
+        w = np.exp(-1*m/(2*L))  # weighting function
         t = int(td_arr[j, m])  # delayed t index
-        if t < d2_end:
-            d = float(V[t, k])
+        if t < d2_end and m == 0:
+            d = float(V[t, k]*w)
             res += d
+#    res += float(V[d2_start+j, i])
     return res
 
 
@@ -188,7 +195,7 @@ def plt_refr():
     start_time = perf_counter_ns()*1e-9
     impix = np.arange(N)
     p = refr(impix)
-    POST = p.reshape((dY, dX))
+    POST = p.reshape((dY, dX), order='C')
     duration = perf_counter_ns()*1e-9-start_time
     print(duration)
     plt.figure(figsize=[10, 10])
