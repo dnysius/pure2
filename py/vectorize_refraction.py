@@ -186,7 +186,8 @@ def plt_refr():
     plt.savefig(join(ARR_FOL, 'refraction.png'), dpi=600)
     plt.show()
     plt.figure(figsize=[10, 10])
-    plt.imshow(V[d2_start:d2_end, imgL:imgR]/np.max(V[d2_start:d2_end, imgL:imgR]),
+    plt.imshow(V[d2_start:d2_end, imgL:imgR]/
+               np.max(np.abs(V[d2_start:d2_end, imgL:imgR])),
                aspect='auto', cmap='gray')
     plt.colorbar()
     plt.title("{} B-Scan ".format(FOLDER_NAME))
