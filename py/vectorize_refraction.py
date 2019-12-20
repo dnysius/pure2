@@ -87,12 +87,12 @@ def determine_total_distance(j):
     for k in range(L):
         d2j = d2[j]
         aak = aa[k]
-#        if j == 0:
-#            t = (2/Cw)*(np.sqrt(d1**2 + aak**2) + foc)
-#            dt[k] = int(np.round(t/tstep))
         if j == 0:
-            j = 1
-            d2j = d2[j]
+            t = (2/Cw)*(np.sqrt(d1**2 + aak**2) + foc)
+            dt[k] = int(np.round(t/tstep))
+#        if j == 0:
+#            j = 1
+#            d2j = d2[j]
         if j != 0 and k == 0:
             t = 2*(d1/Cw + d2j/Cm + foc/Cw)
             dt[k] = int(np.round(t/tstep))
@@ -150,8 +150,8 @@ def load_td_arr():
     return td
 
 
-#td_arr = create_td_arr()
-td_arr = load_td_arr()
+td_arr = create_td_arr()
+#td_arr = load_td_arr()
 var = np.std(np.arange(50))
 
 
@@ -183,7 +183,7 @@ def plt_refr():
     plt.imshow(POST, aspect='auto', cmap='gray')
     plt.colorbar()
     plt.title("{} refraction".format(FOLDER_NAME))
-    plt.savefig(join(ARR_FOL, 'refraction.png'), dpi=600)
+#    plt.savefig(join(ARR_FOL, 'refraction.png'), dpi=600)
     plt.show()
     plt.figure(figsize=[10, 10])
     plt.imshow(V[d2_start:d2_end, imgL:imgR]/
@@ -191,7 +191,7 @@ def plt_refr():
                aspect='auto', cmap='gray')
     plt.colorbar()
     plt.title("{} B-Scan ".format(FOLDER_NAME))
-    plt.savefig(join(ARR_FOL, 'b-scan.png'), dpi=600)
+#    plt.savefig(join(ARR_FOL, 'b-scan.png'), dpi=600)
     plt.show()
     return POST
 
