@@ -19,7 +19,7 @@ min_step = 6e-4
 #SAMPLE_START: int = 31500
 #SAMPLE_END: int = 33000
 imgL: int = 0
-imgR: int = 200
+#imgR: int = 200
 SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
 #SAMPLE_END: int = SAMPLE_START + 700
@@ -92,8 +92,8 @@ def saft(c):
 #                 abs(V[t+1, k]) + abs(V[t-2, k]) +
 #                 abs(V[t+2, k]) + abs(V[t+3, k]) +
 #                 abs(V[t-3, k]))
-            d = abs(V[t, k])
-            res += float(d)
+#            d = abs(V[t, k])
+            res += float(V[t, k])
     return res
 
 
@@ -101,6 +101,7 @@ def plt_saft():
     start_time = perf_counter_ns()*1e-9
     impix = np.arange(N)
     p = saft(impix)
+    p = p/np.max(np.abs(p))
     POST = p.reshape((dY, dX), order='C')
     duration = perf_counter_ns()*1e-9-start_time
     print(duration)

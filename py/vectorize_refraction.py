@@ -13,7 +13,7 @@ from time import perf_counter_ns
 import pickle
 import matplotlib.pyplot as plt
 global min_step, Cw, Cm, a, ARR_FOL, d1
-global trans, lenT, T, V, dX, IMAGE, trans_index, foc
+global trans, lenT, T, V, dX, IMAGE, trans_index, foc, V
 FOLDER_NAME = "1D-3FOC50cm-60um"
 directory_path = "C:\\Users\\indra\\Documents\\GitHub"
 min_step = 6e-4
@@ -61,6 +61,7 @@ d2_end: int = SAMPLE_END - ZERO
 T = tarr[ZERO:, 0]  # 1D, time columns all the same
 V = np.copy(varr[ZERO:, :])  # ZERO'd & sample width
 tstep: float = np.abs(np.mean(T[1:]-T[:-1]))  # average timestep
+dstep: float = tstep*Cw/2
 d1 = T[d2_start]*Cw/2.  # distance to sample
 d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample column (y distance)
 d2 = d2*a
@@ -68,7 +69,8 @@ d1 -= foc
 
 dY: int = d2_end-d2_start  # sample thickness
 L = varr.shape[1]  # scanning width (positions)
-imgR = 200
+#imgR = 300
+imgR = L
 dX = imgR-imgL
 lenT = len(T)  # length of time from ZERO to end of array
 N = dY*dX
@@ -150,7 +152,7 @@ def load_td_arr():
 
 #td_arr = create_td_arr()
 td_arr = load_td_arr()
-var = np.std(np.arange(200))
+var = np.std(np.arange(50))
 
 
 @vectorize(['float64(int64)'], target='parallel')
@@ -163,7 +165,8 @@ def refr(c):
         t = int(td_arr[j, m])  # delayed t index
         w = np.exp((-1/2)*m**2/(var)**2)
         if t < d2_end:
-            d = abs(float(V[t, k]*w))
+#            d = abs(float(V[t, k]*w))
+            d = float(V[t, k])
             res += d
     return res
 
@@ -172,6 +175,7 @@ def plt_refr():
     start_time = perf_counter_ns()*1e-9
     impix = np.arange(N)
     p = refr(impix)
+    p = p/np.max(np.abs(p))
     POST = p.reshape((dY, dX), order='C')
     duration = perf_counter_ns()*1e-9-start_time
     print(duration)
@@ -179,13 +183,14 @@ def plt_refr():
     plt.imshow(POST, aspect='auto', cmap='gray')
     plt.colorbar()
     plt.title("{} refraction".format(FOLDER_NAME))
-#    plt.savefig(join(ARR_FOL, 'refraction.png'), dpi=600)
+    plt.savefig(join(ARR_FOL, 'refraction.png'), dpi=600)
     plt.show()
     plt.figure(figsize=[10, 10])
-    plt.imshow(V[d2_start:d2_end, imgL:imgR], aspect='auto', cmap='gray')
+    plt.imshow(V[d2_start:d2_end, imgL:imgR]/np.max(V[d2_start:d2_end, imgL:imgR]),
+               aspect='auto', cmap='gray')
     plt.colorbar()
     plt.title("{} B-Scan ".format(FOLDER_NAME))
-#    plt.savefig(join(ARR_FOL, 'b-scan.png'), dpi=600)
+    plt.savefig(join(ARR_FOL, 'b-scan.png'), dpi=600)
     plt.show()
     return POST
 
