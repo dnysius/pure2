@@ -18,13 +18,13 @@ directory_path = "C:\\Users\\indra\\Documents\\GitHub"
 min_step = 6e-4
 #SAMPLE_START: int = 31500
 #SAMPLE_END: int = 33000
-#SAMPLE_END: int = SAMPLE_START + 600
-#imgL: int = 50
-#imgR: int = 150
+imgL: int = 0
+imgR: int = 200
 SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
-imgL: int = 0
-imgR: int = 250
+#SAMPLE_END: int = SAMPLE_START + 700
+#imgL: int = 0
+#imgR: int = 250
 Cw = 1498  # speed of sound in Water
 Cm = 6320  # speed of sound in Metal
 a = Cm/Cw  # ratio between two speeds of sound
@@ -65,7 +65,7 @@ d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample column (y distance)
 d1 -= foc
 
 L = varr.shape[1]  # scanning width (positions)
-# imgR = L
+imgR = L
 dY: int = d2_end-d2_start  # sample thickness
 dX = imgR-imgL
 lenT = len(T)  # length of time from ZERO to end of array
@@ -88,12 +88,12 @@ def saft(c):
         t = int(np.round(dt[k]/tstep))  # delayed t (indices)
         w = np.exp((-1/2)*(i-k)**2/(F**2))
         if t < d2_end:
-            d = (abs(V[t, k]) + abs(V[t-1, k]) +
-                 abs(V[t+1, k]) + abs(V[t-2, k]) +
-                 abs(V[t+2, k]) + abs(V[t+3, k]) +
-                 abs(V[t-3, k]))
-#            d = abs(V[t, k])
-            res += float(w*d)
+#            d = (abs(V[t, k]) + abs(V[t-1, k]) +
+#                 abs(V[t+1, k]) + abs(V[t-2, k]) +
+#                 abs(V[t+2, k]) + abs(V[t+3, k]) +
+#                 abs(V[t-3, k]))
+            d = abs(V[t, k])
+            res += float(d)
     return res
 
 
@@ -108,7 +108,7 @@ def plt_saft():
     plt.imshow(POST, aspect='auto', cmap='gray')
     plt.colorbar()
     plt.title("{} vectorized SAFT".format(FOLDER_NAME))
-#    plt.savefig(join(ARR_FOL, "vectorizedsaft.png"), dpi=600)
+    plt.savefig(join(ARR_FOL, "saft.png"), dpi=600)
     plt.show()
 #    plt.figure(figsize=[10, 10])
 #    plt.imshow(V[d2_start:d2_end, imgL:imgR], aspect='auto', cmap='gray')

@@ -5,9 +5,7 @@ since we need solver(k, j, i)
 2.
 '''
 from numba import vectorize
-#from numba import njit, jit
 import numpy as np
-from scipy.optimize import fsolve
 from tqdm import tqdm
 from os import getcwd
 from os.path import join, dirname
@@ -25,13 +23,13 @@ min_step = 6e-4
 #imgL: int = 0
 #imgR: int = 150
 SAMPLE_START: int = 31500
-#SAMPLE_END: int = 33000
-SAMPLE_END: int = SAMPLE_START + 300
+SAMPLE_END: int = 33000
+#SAMPLE_END: int = SAMPLE_START + 300
 imgL: int = 0
-imgR: int = 300
+imgR: int = 150
 Cw = 1498  # speed of sound in Water
 Cm = 6320  # speed of sound in Metal
-Cm = Cw*2
+#Cm = Cw
 a = Cm/Cw  # ratio between two speeds of sound
 foc = 0.0762  # metres
 ARR_FOL = join(directory_path, FOLDER_NAME)
@@ -65,46 +63,19 @@ V = np.copy(varr[ZERO:, :])  # ZERO'd & sample width
 tstep: float = np.abs(np.mean(T[1:]-T[:-1]))  # average timestep
 d1 = T[d2_start]*Cw/2.  # distance to sample
 d2 = T[d2_start:d2_end]*Cw/2. - d1  # sample column (y distance)
+d2 = d2*a
 d1 -= foc
 
 dY: int = d2_end-d2_start  # sample thickness
-dX = imgR-imgL
 L = varr.shape[1]  # scanning width (positions)
+imgR = 200
+dX = imgR-imgL
 lenT = len(T)  # length of time from ZERO to end of array
 N = dY*dX
 trans = np.arange(L)*min_step
 aa = trans - trans[0]
 td_arr = np.empty((dY, L))
-crit_angle = np.arcsin(1/a)
 
-
-def f(t, d2j, dx):
-    # dx is aa or L in the equation
-    # t is theta
-    A = dx**2
-    B = -2*d1*dx
-    C = dx**2-dx**2*a*2+d1**2-a**2*d2j**2
-    D = 2*d1*dx*(a**2-1)
-    E = d1**2-d1**2*a**2
-    return A*t**4 + B*t**3 + C*t**2 + D*t + E
-
-
-def g(t, d2j, dx):
-    if t >= crit_angle:
-        t = crit_angle
-    t2 = np.abs(np.arcsin(a*np.sin(t)))
-    return d2j*np.tan(t2) + d1*np.tan(t) - dx
-
-
-'''
-s = fsolve(g, 0, args=(d2j, aak), maxfev=10)
-                rad1 = np.min(s)
-                rad2 = np.arcsin(a*np.sin(rad1))
-                dt[k] = int(np.round(2*(np.abs(d1/Cw/np.cos(rad1))
-                                        + np.abs(d2j/Cm/np.cos(rad2))
-                                        + foc/Cw)/tstep))
-
-'''
 
 def determine_total_distance(j):
     # given impix coordinate (leftmost), generate array (corresponding
@@ -114,19 +85,22 @@ def determine_total_distance(j):
     for k in range(L):
         d2j = d2[j]
         aak = aa[k]
-        if d2j == 0:
-            d = (2/Cw)*(np.sqrt((d1+d2j)**2 + aak**2) + foc)
-            dt[k] = int(np.round(d/tstep))
-        elif d2j != 0 and aak == 0:
-            d = 2*(d1/Cw + d2j/Cm + foc/Cw)
-            dt[k] = int(np.round(d/tstep))
-        elif aak != 0 and d2j != 0:
+#        if j == 0:
+#            t = (2/Cw)*(np.sqrt(d1**2 + aak**2) + foc)
+#            dt[k] = int(np.round(t/tstep))
+        if j == 0:
+            j = 1
+            d2j = d2[j]
+        if j != 0 and k == 0:
+            t = 2*(d1/Cw + d2j/Cm + foc/Cw)
+            dt[k] = int(np.round(t/tstep))
+        elif k != 0 and j != 0:
             P4 = aak**2
             P3 = -2*d1*aak
             P2 = (aak**2-aak**2*a**2+d1**2-a**2*d2j**2)
             P1 = 2*d1*aak*(a**2-1)
             P0 = d1**2*(1-a**2)
-            saft_angle = np.abs(np.arctan(aak/(d2j+d1)))
+            saft_angle = np.abs(np.arctan(aak/d1))
             roots = np.roots([P4, P3, P2, P1, P0])  # theta 1
             roots = np.abs(roots[np.imag(roots) < 1e-7])
             if len(roots) != 0:
@@ -134,9 +108,13 @@ def determine_total_distance(j):
                 stheta1 = 1./y0
                 st1 = np.abs(stheta1[np.abs(stheta1) <= 1/a])
                 if len(st1) > 1:
-                    stheta1 = st1[np.abs(saft_angle - st1).argmin()]
-                    rad1 = np.arcsin(stheta1)  # theta_1
-                    rad2 = np.arcsin(stheta1*a)  # theta_2
+#                    stheta1 = st1[np.abs(saft_angle - st1).argmin()]
+#                    stheta1 = np.abs(np.min(st1))
+                    rad1 = np.arcsin(st1)  # theta_1
+                    rad2 = np.arcsin(st1*a)  # theta_2
+                    d = np.abs(d1/Cw/np.cos(rad1)) + np.abs(d2j/Cm/np.cos(rad2))
+                    rad1 = st1[d.argmin()]
+                    rad2 = np.arcsin(np.sin(rad1)*a)  # theta_2
                     dt[k] = int(np.round(2*(np.abs(d1/Cw/np.cos(rad1))
                                          + np.abs(d2j/Cm/np.cos(rad2))
                                          + foc/Cw)/tstep))
@@ -157,7 +135,7 @@ def create_td_arr():
     for j in tqdm(range(dY), desc='Creating td_arr row: '):
         td_arr[j, :] = determine_total_distance(j)
     duration = perf_counter_ns()*1e-9-start_time
-    np.save(join(ARR_FOL, 'td_arr.npy'), td_arr, allow_pickle=False)
+#    np.save(join(ARR_FOL, 'td_arr.npy'), td_arr, allow_pickle=False)
     print(duration)
     return td_arr
 
@@ -170,24 +148,23 @@ def load_td_arr():
     return td
 
 
-td_arr = create_td_arr()
-#td_arr = load_td_arr()
+#td_arr = create_td_arr()
+td_arr = load_td_arr()
+var = np.std(np.arange(200))
 
 
 @vectorize(['float64(int64)'], target='parallel')
 def refr(c):
     i = int(c % dX)  # x-coord of impix
-    i += imgL
     j = int(c // dX)  # y-coord of impix
     res = 0
     for k in range(L):
-        m = abs(i-k)
-        w = np.exp(-1*m/(2*L))  # weighting function
+        m = abs(i + imgL - k)
         t = int(td_arr[j, m])  # delayed t index
-        if t < d2_end and m == 0:
-            d = float(V[t, k]*w)
+        w = np.exp((-1/2)*m**2/(var)**2)
+        if t < d2_end:
+            d = abs(float(V[t, k]*w))
             res += d
-#    res += float(V[d2_start+j, i])
     return res
 
 
@@ -201,12 +178,14 @@ def plt_refr():
     plt.figure(figsize=[10, 10])
     plt.imshow(POST, aspect='auto', cmap='gray')
     plt.colorbar()
-    plt.title("{} combined".format(FOLDER_NAME))
+    plt.title("{} refraction".format(FOLDER_NAME))
+#    plt.savefig(join(ARR_FOL, 'refraction.png'), dpi=600)
     plt.show()
     plt.figure(figsize=[10, 10])
     plt.imshow(V[d2_start:d2_end, imgL:imgR], aspect='auto', cmap='gray')
     plt.colorbar()
-    plt.title("{} vectorized refraction ".format(FOLDER_NAME))
+    plt.title("{} B-Scan ".format(FOLDER_NAME))
+#    plt.savefig(join(ARR_FOL, 'b-scan.png'), dpi=600)
     plt.show()
     return POST
 
