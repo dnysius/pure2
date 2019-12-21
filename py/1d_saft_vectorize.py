@@ -7,10 +7,7 @@ from misc.load_arr import load_arr, find_nearest
 from misc.normalize_image import normalize
 import matplotlib.pyplot as plt
 from misc.load_conf import load_conf
-#if __name__ == '__main__':
-#    DATA_FOLDER = str(sys.argv[1])
-#else:
-DATA_FOLDER = "3FOC50cm-60um"
+DATA_FOLDER = ""
 directory_path: str = "C:/Users/indra/Documents/GitHub"
 ARR_FOL = join(directory_path, DATA_FOLDER)
 tarr, varr = load_arr("varr.pkl", ARR_FOL)
@@ -32,11 +29,14 @@ imgL = conf['imgL']
 imgR = conf['imgR']
 var = float(np.std(np.arange(80)))
 
-dY: int = SAMPLE_END - SAMPLE_START  # sample thickness
-dX: int = imgR-imgL
 a = Cm/Cw  # ratio between two speeds of sound
-d2_start: int = SAMPLE_START - ZERO
+if (SAMPLE_START - ZERO) < 0:
+    d2_start:int = ZERO
+else:
+    d2_start: int = SAMPLE_START - ZERO
 d2_end: int = SAMPLE_END - ZERO
+dY = d2_end - d2_start  # sample thickness
+dX = imgR-imgL
 tstep: float = np.abs(np.mean(T[1:]-T[:-1]))  # average timestep
 dstep_w = Cw*tstep/2
 dstep_m = dstep_w*a
@@ -59,7 +59,7 @@ def saft(c):
     res = 0
     for k in range(L):
         t = int(np.round(dt[k]/tstep))  # delayed t (indices)
-        w = np.exp((-1/2)*(i-k)**2/(var**2))
+#        w = np.exp((-1/2)*(i-k)**2/(var**2))
         if t < d2_end:
 #            d = (abs(V[t, k]) + abs(V[t-1, k]) +
 #                 abs(V[t+1, k]) + abs(V[t-2, k]) +
@@ -82,7 +82,10 @@ def plt_saft():
     plt.title("{} SAFT".format(DATA_FOLDER))
     duration = perf_counter_ns()*1e-9-start_time
     print("Summing and plotting took {} s".format(duration))
-#    plt.savefig(join(ARR_FOL, "saft.png"), dpi=400)
+    start_time = perf_counter_ns()*1e-9
+    plt.savefig(join(ARR_FOL, "saft.png"), dpi=400)
+    duration = perf_counter_ns()*1e-9-start_time
+    print("Saving the picture took {} s".format(duration))
     plt.show()
     return POST
 

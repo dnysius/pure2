@@ -6,8 +6,8 @@ from misc.load_arr import load_arr, find_nearest
 from misc.normalize_image import normalize
 import matplotlib.pyplot as plt
 from misc.load_conf import load_conf
-DATA_FOLDER: str = "3FOC50cm-60um"
-directory_path: str = "C:/Users/indra/Documents/GitHub"
+DATA_FOLDER: str = ""
+directory_path: str = "C:\\Users\\indra\\Documents\\GitHub"
 ARR_FOL = join(directory_path, DATA_FOLDER)
 tarr, varr = load_arr("varr.pkl", output_folder=ARR_FOL)
 start_time = perf_counter_ns()*1e-9
@@ -29,10 +29,13 @@ T = tarr[ZERO:, 0]  # 1D, time columns all the same
 lenT = len(T)  # length of time from ZERO to end of array
 V = np.copy(varr[ZERO:, :])  # ZERO'd & sample width
 L = V.shape[1]  # scanning width (number of transducer positions)
-dY = SAMPLE_END - SAMPLE_START  # sample thickness
-dX = imgR-imgL
-d2_start: int = SAMPLE_START - ZERO
+if (SAMPLE_START - ZERO) < 0:
+    d2_start:int = ZERO
+else:
+    d2_start: int = SAMPLE_START - ZERO
 d2_end: int = SAMPLE_END - ZERO
+dY = d2_end - d2_start  # sample thickness
+dX = imgR-imgL
 tstep: float = np.abs(np.mean(T[1:]-T[:-1]))  # average timestep
 dstep: float = tstep*Cw/2
 
@@ -48,6 +51,10 @@ if __name__ == '__main__':
     plt.title("{} B-Scan".format(DATA_FOLDER))
     plt.colorbar()
     duration = perf_counter_ns()*1e-9-start_time
+    start_time = perf_counter_ns()*1e-9
     print("Plotting took {} s".format(duration))
-#    plt.savefig(join(ARR_FOL, 'b-scan.png'), dpi=600)
+    start_time = perf_counter_ns()*1e-9
+    plt.savefig(join (ARR_FOL, 'b-scan.png'), dpi=400)
+    duration = perf_counter_ns()*1e-9-start_time
+    print("Saving the picture took {} s".format(duration))
     plt.show()

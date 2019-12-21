@@ -23,9 +23,9 @@ def load_conf(FOL):
             val = float(val)
         conf_dict[key] = val
     return conf_dict
-    
-if __name__ == '__main__':
-    DATA_FOLDER: str = "3FOC50cm-60um"
-    directory_path: str = "C:/Users/indra/Documents/GitHub"
-    ARR_FOL = join(directory_path, DATA_FOLDER)
-    conf = load_conf(ARR_FOL)
+
+#if __name__ == '__main__':
+#    DATA_FOLDER: str = "FLAT50CM-PURE-60um"
+#    directory_path: str = "C:/Users/indra/Documents/GitHub"
+#    ARR_FOL = join(directory_path, DATA_FOLDER)
+#    conf = load_conf(ARR_FOL)
