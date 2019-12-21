@@ -7,19 +7,23 @@ from time import perf_counter_ns
 from misc.load_arr import load_arr, find_nearest
 from misc.normalize_image import normalize
 import matplotlib.pyplot as plt
-DATA_FOLDER: str = "1D-3FOC50cm-60um"
+from misc.load_conf import load_conf
+DATA_FOLDER: str = "3FOC50cm-60um"
 directory_path: str = "C:/Users/indra/Documents/GitHub"
 ARR_FOL = join(directory_path, DATA_FOLDER)
 tarr, varr = load_arr("varr.pkl", output_folder=ARR_FOL)
-
-min_step = 6e-4
-foc = 0.0762  # metres
-Cw = 1498  # speed of sound in Water
-Cm = 6320  # speed of sound in Metal
-SAMPLE_START: int = 31500
-SAMPLE_END: int = 32700
-imgL: int = 40
-imgR: int = 180
+start_time = perf_counter_ns()*1e-9
+conf = load_conf(ARR_FOL)
+duration = perf_counter_ns()*1e-9-start_time
+print('Loading config took {} s'.format(duration))
+min_step = conf['min_step']
+foc = conf['foc']
+Cw = conf['Cw']
+Cm = conf['Cm']
+SAMPLE_START = conf['SAMPLE_START']
+SAMPLE_END = conf['SAMPLE_END']
+imgL = conf['imgL']
+imgR = conf['imgR']
 
 a = Cm/Cw  # ratio between two speeds of sound
 ZERO: int = find_nearest(tarr[:, 0], 0)
@@ -129,24 +133,13 @@ def plt_refr():
     p = refr(impix)
     p = normalize(p, float(np.min(p)), float(np.max(p)))
     POST = p.reshape((dY, dX), order='C')
-    duration = perf_counter_ns()*1e-9-start_time
-    print("Summation and plotting took {} s".format(duration))
     plt.figure(figsize=[10, 10])
     plt.imshow(POST, aspect='auto', cmap='gray')
     plt.colorbar()
     plt.title("{} refraction".format(DATA_FOLDER))
+    duration = perf_counter_ns()*1e-9-start_time
+    print("Summation and plotting took {} s".format(duration))
 #    plt.savefig(join(ARR_FOL, 'refraction.png'), dpi=600)
-    plt.show()
-    plt.figure(figsize=[10, 10])
-    vmin = np.min(V[d2_start:d2_end, imgL:imgR].flatten())
-    vmax = np.max(V[d2_start:d2_end, imgL:imgR].flatten())
-    view = normalize(V[d2_start:d2_end, imgL:imgR].flatten(),
-                     float(vmin), float(vmax))
-    view = view.reshape((dY, dX), order='C')
-    plt.imshow(view, aspect='auto', cmap='gray')
-    plt.colorbar()
-    plt.title("{} B-Scan".format(DATA_FOLDER))
-#    plt.savefig(join(ARR_FOL, 'b-scan.png'), dpi=600)
     plt.show()
     return POST
 

@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Dec 20 10:07:13 2019
-
-@author: indra
-"""
 import numpy as np
 from os.path import join
 
