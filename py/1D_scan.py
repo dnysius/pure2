@@ -7,20 +7,10 @@ from os import getcwd
 from os.path import join, dirname
 from matplotlib.ticker import FixedFormatter
 global min_step, FILENAME
-FOLDER_NAME = "1D-3FOC50cm-60um"  # edit this
-#METHOD = "refraction"
-METHOD = "SAFT"
-#METHOD = "B-scan"
+DATA_FOLDER = "3FOC50cm-60um"  # edit this
+METHOD = "B-scan"
 min_step = 6e-4  # and this
-if FOLDER_NAME[:2] == "2D":
-    par = "2D SCANS"
-elif FOLDER_NAME[:2] == "1D":
-    par = "1D SCANS"
-else:
-    par = "ANGLE DEPENDENCE"
-BSCAN_FOLDER = join(dirname(getcwd()), "scans", "BSCAN")
-SCAN_FOLDER = join(dirname(getcwd()), "data", par, FOLDER_NAME)
-SCAN_FOLDER = join("C:\\Users\\dionysius\\Documents\\pure repo\\data", par, FOLDER_NAME)
+SCAN_FOLDER = join("C:/Users/indra/Documents/GitHub", DATA_FOLDER)
 
 
 def load_arr(FILENAME, output_folder=SCAN_FOLDER):
@@ -60,7 +50,7 @@ def bscan(tarr, varr, start=0, end=-1, y1=0, y2=-1, absmax=0):
 
     ax1.set_xticklabels(np.round(ax1.get_xticks()*100*min_step, 4))
     ax1.set_yticklabels((ax1.get_yticks()).astype(int))
-    plt.title("{0} {1}".format(FOLDER_NAME, METHOD))
+    plt.title("{0} {1}".format(DATA_FOLDER, METHOD))
     ax2 = ax1.twinx()  # second scale on same axes
 #    im1 = ax2.imshow(b, aspect='auto', cmap='gray', vmin=-60, vmax=0, interpolation='none', alpha=1)
     im1 = ax2.imshow(b, aspect='auto', cmap='gray',
@@ -124,14 +114,14 @@ def reg_plot(b):
     plt.figure(figsize=[14, 10])
     plt.imshow(b, aspect='auto', cmap='gray')
     plt.colorbar()
-    plt.title("{} refraction".format(FOLDER_NAME))
+    plt.title("{} refraction".format(DATA_FOLDER))
     plt.show()
 
 
 if __name__ == '__main__':
 #    FILENAME = "refraction-SAFT-1D-3FOC50cm-60um.pkl"  # and this
-    FILENAME = "SAFT-1D-3FOC50cm-60um.pkl"
-#    FILENAME = "varr.pkl"
+#    FILENAME = "SAFT-1D-3FOC50cm-60um.pkl"
+    FILENAME = "varr.pkl"
 #    FILENAME = "sample-refraction.npy"
     tarr, varr = load_arr(FILENAME)
     timestep = np.mean(tarr[1:, :, :] - tarr[:-1, :, :])  # get avg timestep
@@ -139,7 +129,7 @@ if __name__ == '__main__':
         varr = varr[:, 0, :]
     varr = varr[:, :175]
 
-    ibscan(tarr, varr, start=31500-2315, end=33000-2315)
+    ibscan(tarr, varr, start=30000, end=32000)
 #    arr = varr[31500-2315:33000-2315, :175]
 #    arr = varr[31500:33000, :175]
 #    np.save(join(SCAN_FOLDER, "sample-refraction.npy"), arr)
