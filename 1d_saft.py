@@ -54,6 +54,13 @@ trans = np.arange(L)*min_step  # transducer positions
 
 @vectorize(['float64(int64)'], target='parallel')
 def saft(c):
+    """Calculate the time delays to the transducers, then sum the voltages
+    corresponding to the delayed times.
+
+    Keyword arguments:
+    c --
+
+    """
     i = c % dX  # x-coord of impix
     j = c // dX  # y-coord of impix
     i += imgL

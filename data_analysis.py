@@ -3,11 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from os import listdir, mkdir, getcwd, makedirs
 from os.path import isfile, isdir, join, dirname, exists
+from path import Path
 import re
-import pickle
-global tstep, BSCAN_FOLDER
-BSCAN_FOLDER = join(dirname(getcwd()), "scans", "BSCAN")
-tstep = 3.999999999997929e-08
+global tstep, IMG_FOL
+IMG_FOL = Path(getcwd()).parent/"scans"/"BSCAN"  # Image folder
+tstep = 3.999999999997929e-08  # Use data from time array instead
 _nsre = re.compile('([0-9]+)')
 
 
@@ -23,36 +23,32 @@ def indw2time(indw):
 
 class Signal:
     def __init__(self, mypath, ftype='npy'):
-        s = mypath.split(sep='\\')
-        self.mypath = mypath
-        if s[-1] == '':
-            self.title = s[-2]
-        else:
-            self.title = s[-1]
-        if not isdir(mypath):
+        self.p = Path(mypath)
+        self.title = self.p.basename()
+        if self.p.isdir() is False:
             mkdir(mypath)
-            self.BSCAN_FOLDER = BSCAN_FOLDER
-            self.ftype = ftype
-            self.fnames = [f for f in listdir(mypath) if isfile(join(mypath, f)) and f[-3:] == self.ftype[-3:]]
-            self.fnames.sort(key=natural_sort_key)
-            self.angles = np.linspace(0, 30, len(self.fnames))
-            self.angle_step = 30/len(self.fnames)
-            self.signal_data = np.empty(shape=(len(self.fnames), len(self.__loadf(0)[:, 0]), 2))
-            lenY = len(self.signal_data[0, :, 0])
-            for i in range(len(self.fnames)):
-                xy = self.__loadf(i)
-                self.signal_data[i, :, :] = xy
+        self.IMG_FOL = IMG_FOL  # Image folder path
+        self.ftype = ftype  # file extension
+        self.fnames = [f for f in self.p.listdir() if (self.p/f).isfile() and f[-3:] == self.ftype[-3:]]
+        self.fnames.sort(key=natural_sort_key)  # sort file names
+        self.angles = np.linspace(0, 30, len(self.fnames))  # determine angles
+        self.angle_step = 30/len(self.fnames)
+        self.signal_data = np.empty(shape=(len(self.fnames), len(self.__loadf(0)[:, 0]), 2))
+        lenY = len(self.signal_data[0, :, 0])
+        for i in range(len(self.fnames)):
+            xy = self.__loadf(i)
+            self.signal_data[i, :, :] = xy
         self.signal_data = self.signal_data[:, lenY//2:, :]
         self.signal_data[:, :, 1] = self.signal_data[:, :, 1]/np.amax(np.abs(self.signal_data[:, :, 1]).flatten())
-        out = join(dirname(getcwd()), "obj", self.title+"_signal_data.pkl")
+        out = Path(getcwd())/"obj"/(self.title + "_signal_data.pkl")
         with open(out, 'wb') as wr:
-            pickle.dump(self.signal_data, wr, pickle.DEFAULT_PROTOCOL)
+            np.save(wr, self.signal_data, allow_pickle=False)
 
     def __loadf(self, i):
         if self.ftype == '.csv' or self.ftype == 'csv':
-            xy = np.loadtxt(open(join(self.mypath, self.fnames[i]), "rb"), delimiter=',', skiprows=0)
+            xy = np.loadtxt(open(Path(self.p)/self.fnames[i], "rb"), delimiter=',', skiprows=0)
         else:
-            xy = np.load(open(join(self.mypath, self.fnames[i]), "rb"))
+            xy = np.load(open(Path(self.p)/self.fnames[i], "rb"))
         if self.ftype == '.npz' or self.ftype == 'npz':
             xy = xy[xy.files[0]]
         return xy
@@ -150,7 +146,7 @@ class Signal:
 #          ax.grid(True, axis='y', which="major", alpha=.5)
 #          ax.grid(True, axis='y', which="minor", alpha=.2, linestyle="--")
 #          ax.grid(True, axis='x', which="major", alpha=.2, linestyle="--")
-        plt.savefig(join(self.BSCAN_FOLDER, self.title+'.png'), dpi=300)
+        plt.savefig(join(self.IMG_FOL, self.title+'.png'), dpi=300)
         plt.show(fig)
 
     def Iang_bscan(self, domain=(2600, 5200), vmin=0, vmax=1, y1=0, y2=-1):
@@ -212,8 +208,8 @@ def graph_signals(trans, start, end):
         signal_data = np.load(rd)
         L = np.shape(signal_data)[0]
         ang = np.linspace(0, 30, L)
-        spath = "C:\\Users\\dionysius\\Desktop\\PURE\\pure\\data\\30deg\\{}\\signals".format(trans)
-        if not exists(spath):
+        spath = Path(getcwd())/"data"/"30deg"/trans/"signals"
+        if spath.isdir() is False:
             makedirs(spath)
     for i in range(L):
         plt.figure(figsize=[8, 6])
