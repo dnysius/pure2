@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from os.path import join
 import re
-conversion_dict = {'DATA_FOLDER': 'str', 'min_step': 'float', 'foc': 'float',
+conversion_dict = {'title': 'str', 'min_step': 'float', 'foc': 'float',
                    'Cw': 'float', 'Cm': 'float', 'SAMPLE_START': 'int',
-                   'SAMPLE_END': 'int', 'imgL': 'int', 'imgR': 'int'}
+                   'SAMPLE_END': 'int', 'imgL': 'int', 'imgR': 'int',
+                   'ymin': 'int', 'ymax': 'int'}
 
 
 def load_conf(FOL):

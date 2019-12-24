@@ -147,28 +147,18 @@ class Scope:
         if self.TOTAL_BYTES_TO_XFER >= 400000:
             self.KsInfiniiVisionX.chunk_size = self.TOTAL_BYTES_TO_XFER
 
-    def grab(self, ind):
+    def grab(self, ind, save=True):
         i = 0 # index of Wav_data, recall that python indices start at 0, so ch1 is index 0
         for channel_number in self.CHS_ON:
             self.Wav_Data[:,i] = np.array(self.KsInfiniiVisionX.query_binary_values(':WAVeform:SOURce CHANnel' + str(channel_number) + ';DATA?', "h", False)) # See also: https://PyVisa.readthedocs.io/en/stable/rvalues.html#reading-binary-values
             self.Wav_Data[:,i] = ((self.Wav_Data[:,i]-self.ANALOGVERTPRES[channel_number+7])*self.ANALOGVERTPRES[channel_number-1])+self.ANALOGVERTPRES[channel_number+3]
             i +=1
-
         if self.TOTAL_BYTES_TO_XFER >= 400000:
             self.KsInfiniiVisionX.chunk_size = 20480
-#        if len(self.fnames) >= 1:
-#            recent = self.fnames[-1]
-#            pre = len(self.BASE_FILE_NAME)
-#            suf = -4
-#            try:
-#                i = int(recent[pre:suf]) + 1
-#            except:
-#                raise TypeError
-#        else:
-#            i = 0
-        filename = join(self.BASE_DIRECTORY, self.BASE_FILE_NAME + "{0}".format(ind) + ".npy")
-        with open(filename, 'wb') as filehandle: # wb means open for writing in binary; can overwrite
-            np.save(filehandle, np.insert(self.Wav_Data, 0, self.DataTime, axis=1))
+        if save:
+            filename = join(self.BASE_DIRECTORY, self.BASE_FILE_NAME + "{0}".format(ind) + ".npy")
+            with open(filename, 'wb') as filehandle: # wb means open for writing in binary; can overwrite
+                np.save(filehandle, np.insert(self.Wav_Data, 0, self.DataTime, axis=1))
         arr = np.insert(self.Wav_Data, 0, self.DataTime, axis=1)
         return arr
 

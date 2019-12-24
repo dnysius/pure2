@@ -4,29 +4,21 @@ import numpy as np
 from scipy.signal import hilbert
 from os import getcwd
 from os.path import join, dirname
+from misc.load_arr import load_arr, find_nearest
 global graph_title
 FOLDER_NAME = "1D-FLAT5in"  # edit this
-FILENAME = "varr.pkl"  # and this
 graph_title = "FLAT3in"  # and this
-if "1D" in FOLDER_NAME:
-    par = "1D SCANS"
-elif "2D" in FOLDER_NAME:
-    par = "2D SCANS"
-else:
-    par = "ANGLE DEPENDENCE"
-path_folder = join(dirname(getcwd()), "data", par, FOLDER_NAME)
-path_file = join(path_folder, FILENAME)
-path_tarr = join(path_folder, "tarr.pkl")
+path_folder = join(dirname(getcwd()), "data", "1D SCANS", FOLDER_NAME)
+Cw = 1498
+Cm = 6320
 
-with open(path_file, "rb") as rd:
-    varr = np.load(rd, allow_pickle=True)
-    varr = varr[:, 0, :]
-with open(path_tarr, "rb") as rd:
-    tarr = np.load(rd, allow_pickle=True)
-    tarr = tarr[:, 0, :]
-
+tarr, varr = load_arr("varr.pkl", path_folder)
 vmax = np.max(varr.flatten())
 vmin = np.min(varr.flatten())
+ZERO: int = find_nearest(tarr[:, 0], 0)
+T = tarr[ZERO:, 0]  # 1D, time columns all the same
+lenT = len(T)  # length of time from ZERO to end of array
+V = np.copy(varr[ZERO:, :])  # ZERO'd & sample width
 
 
 def image(varr):

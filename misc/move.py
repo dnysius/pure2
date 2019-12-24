@@ -2,20 +2,17 @@
 from time import sleep
 import serial
 import serial.tools.list_ports
-global min_step, ArduinoNotFoundError, arduino
 min_step = 4e-4
-ArduinoNotFoundError = None
+arduino = None
+ports = list(serial.tools.list_ports.comports())
+for p in ports:
+    if "Arduino" in p[1]:
+        arduino = serial.Serial(p[0], 9600)
+if arduino is None:
+    print('No Arduino found')
+#arduino = serial.Serial('/dev/cu.usbmodem14201', 9600)
+#arduino = serial.Serial('COM5', 9600)
 
-#ports = list(serial.tools.list_ports.comports())
-#try:
-#    for p in ports:
-#        if "Arduino" in p[1] and arduino is None:
-#            arduino = serial.Serial(p[0], 9600)
-#except NameError:
-#    ArduinoNotFoundError = True
-#else:
-#    ArduinoNotFoundError = False
-arduino = serial.Serial("COM5", 9600)
 
 def d2s(dist):
     # Converts distance in metres to number of steps
@@ -33,21 +30,14 @@ def step(command):
         arduino.write(str.encode("{}".format(command)))
     except TypeError:
         print("Command is not 1-4")
-    except:
-        if ArduinoNotFoundError is True:
-            print("ArduinoNotFoundError: cannot call step()")
-        else:
-            print("Unexpected Error")
 
 
 def move():
     # 'x -.01' - moves 1 cm in -x direction
     # 'y 1' - moves 1 metre in y direction
     # 'esc' - exits program
-    done = ArduinoNotFoundError
-    if ArduinoNotFoundError is True:
-        print("ArduinoNotFoundError: cannot call move()")
-    while not done:
+    done = False
+    while done is False:
         cmd = input('//\t')
         if cmd == '':
             pass
@@ -75,16 +65,7 @@ def move():
 
 
 if __name__ == '__main__':
-#    move()
-#    i = 0
-#    for y in range(200):
-#        for x in range(200):
-#            if i % 2 != 0:
-#                step(4)
-#            else:
-#                step(3)
-#        step(1)
-    for x in range(int(.06//min_step)):
-        step(4)
+    move()
 
-arduino.close()
+if arduino is not None:
+    arduino.close()
