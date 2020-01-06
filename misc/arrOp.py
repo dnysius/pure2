@@ -55,23 +55,25 @@ def pkl_to_csv(path):
     np.savetxt(p/"varr.csv", varr, delimiter=",")
 
 
-def pkl_to_npy(path):
+def pkl_to_npy():
     data_path = Path("C:/Users/indra/Documents/GitHub")
     subfolders = [d for d in os.listdir(data_path)
-                  if op.isdir(data_path/d) and d != "pure2"]
+                  if op.isdir(data_path/d) and d != "pure2" and d!="LENS50cm"]
     for folder in subfolders:
         subp = data_path/folder
-    with open(subp/"tarr.pkl", 'rb') as rd:
-        tarr = np.load(rd, allow_pickle=True)
-        if len(tarr.shape) == 3 and tarr.shape[1] == 1:
-            tarr = tarr[:, 0, :]
-        elif len(tarr.shape) == 3 and tarr.shape[2] == 1:
-            tarr = tarr[:, :, 0]
-        np.save(subp/"tarr.npy", tarr, allow_pickle=False)
-    with open(subp/"varr.pkl", 'rb') as rd:
-        varr =  np.load(rd, allow_pickle=True)
-        if len(varr.shape) == 3 and varr.shape[1] == 1:
-            varr = varr[:, 0, :]
-        elif len(varr.shape) == 3 and varr.shape[2] == 1:
-            varr = varr[:, :, 0]
-        np.save(subp/"varr.npy", varr, allow_pickle=False)
+        with open(subp/"tarr.pkl", 'rb') as rd:
+            tarr = np.load(rd, allow_pickle=True)
+            if len(tarr.shape) == 3 and tarr.shape[1] == 1:
+                tarr = tarr[:, 0, :]
+            elif len(tarr.shape) == 3 and tarr.shape[2] == 1:
+                tarr = tarr[:, :, 0]
+            np.save(subp/"tarr.npy", tarr, allow_pickle=False)
+        with open(subp/"varr.pkl", 'rb') as rd:
+            varr =  np.load(rd, allow_pickle=True)
+            if len(varr.shape) == 3 and varr.shape[1] == 1:
+                varr = varr[:, 0, :]
+            elif len(varr.shape) == 3 and varr.shape[2] == 1:
+                varr = varr[:, :, 0]
+            np.save(subp/"varr.npy", varr, allow_pickle=False)
+
+

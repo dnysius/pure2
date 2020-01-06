@@ -6,9 +6,10 @@ from path import Path
 from time import perf_counter_ns
 from misc.arrOp import load_arr, find_nearest, normalize
 from misc.load_conf import load_conf
+from scipy.signal import hilbert
 from numba import vectorize
 # Define paths
-DATA_FOLDER = "3FOC7in"  # folder containing scan data
+DATA_FOLDER = "FLAT50cm-PURE"  # folder containing scan data
 directory_path: str = Path("C:/Users/indra/Documents/GitHub")
 # Import data
 ARR_FOL = directory_path/DATA_FOLDER
@@ -54,18 +55,11 @@ trans = np.arange(L)*min_step  # transducer positions
 
 @vectorize(['float64(int64)'], target='parallel')
 def saft(c):
-    """Calculate the time delays to the transducers, then sum the voltages
-    corresponding to the delayed times.
-
-    Keyword arguments:
-    c --
-
-    """
     i = c % dX  # x-coord of impix
     j = c // dX  # y-coord of impix
     i += imgL
     aa = np.abs(trans - trans[i])  # lateral distance from impix to trans
-    z: float = d2[j]/a + d1
+    z: float = d2[j] + d1
     dt = (2/Cw)*np.sqrt(aa[:]**2 + z**2) + 2*foc/Cw  # delayed times
     res = 0
     for k in range(L):
@@ -82,6 +76,7 @@ def plt_saft():
     p = saft(impix)
     p = normalize(p, float(np.min(p)), float(np.max(p)))  # normalize to (-1,1)
     POST = p.reshape((dY, dX), order='C')
+    POST = 20*np.log10(np.abs(hilbert(POST, axis=0)))  # filter
     # PLOTTING
     fig, ax1 = plt.subplots(1, 1, figsize=(11, 10))
     im0 = plt.imshow(POST, aspect='auto', cmap='gray')
@@ -106,7 +101,7 @@ def plt_saft():
     duration = perf_counter_ns()*1e-9-start_time
     print("Summing and plotting took {} s".format(duration))
     start_time = perf_counter_ns()*1e-9
-    plt.savefig(ARR_FOL/"saft.png", dpi=400)
+#    plt.savefig(ARR_FOL/"saft.png", dpi=400)  # save image
     duration = perf_counter_ns()*1e-9-start_time
     print("Saving the picture took {} s".format(duration))
     plt.show()

@@ -7,9 +7,10 @@ import visa  # PyVisa info @ http://PyVisa.readthedocs.io/en/stable/
 import numpy as np
 from os import makedirs, getcwd
 from os.path import join, exists, dirname
+from path import Path
 global VISA_ADDRESS, VISA_PATH, FILENAME
 VISA_ADDRESS = 'USB0::0x0957::0x1799::MY52102738::INSTR'  # edit this
-VISA_PATH = 'C:\\Windows\\System32\\visa32.dll'  # and this
+VISA_PATH = Path('C:\\Windows\\System32\\visa32.dll')  # and this
 FILENAME = "scope"  # and this
 
 
@@ -19,9 +20,9 @@ class Scope:
         self.SCOPE_VISA_ADDRESS = VISA_ADDRESS
         self.GLOBAL_TOUT = 10000  # IO time out in milliseconds
         self.BASE_FILE_NAME = filename + "_"
-        self.BASE_DIRECTORY = directory
-        if not exists(self.BASE_DIRECTORY):
-            makedirs(self.BASE_DIRECTORY)
+        self.BASE_DIRECTORY = Path(directory)
+        if self.BASE_DIRECTORY.exists is False:
+            self.BASE_DIRECTORY.mkdir(parents=True)
         try:
             self.rm = visa.ResourceManager(VISA_PATH)
         except:
@@ -168,6 +169,6 @@ class Scope:
 
 
 if __name__ == '__main__':
-    d = join(dirname(getcwd()), "data")
+    d = Path(getcwd()).parent
     s = Scope(d)
-    s.grab("test")  #  mm
+    s.grab(1)  #  mm
