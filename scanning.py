@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from scope import Scope
-from path import Path
-from os import listdir, getcwd, remove
-from os.path import join, isfile, dirname
+from pathlib import Path
 import serial
 from time import sleep
 import serial.tools.list_ports
@@ -12,9 +10,9 @@ global FILENAME, SCAN_FOLDER, min_step, arduino
 DATA_FOLDER = "FLAT50cm-PURE"
 min_step = 4e-4
 FILENAME = "scope"
-SCAN_FOLDER = Path(getcwd()).parent/DATA_FOLDER
-#if SCAN_FOLDER.exists is False:
-#    SCAN_FOLDER.mkdir(parents=True)
+SCAN_FOLDER = Path.cwd().parent/DATA_FOLDER
+if SCAN_FOLDER.exists is False:
+    SCAN_FOLDER.mkdir(parents=True)
 #arduino = serial.Serial('/dev/cu.usbmodem14201', 9600)
 #arduino = serial.Serial('COM5', 9600)
 arduino = None
@@ -49,13 +47,13 @@ def step(command):
 def clear_scan_folder():
     s = SCAN_FOLDER
     for f in list(s.iterdir()):
-        if isfile(s/f) and (FILENAME in f):
-            remove(s/f)
+        if (s/f).is_file() and (FILENAME in f):
+            (s/f).unlink(missing_ok=True)
 
 
 def load_arr(output_folder=SCAN_FOLDER):
-    ftarr = join(output_folder, "tarr.npy")
-    fvarr = join(output_folder, "varr.npy")
+    ftarr = output_folder/"tarr.npy"
+    fvarr = output_folder/"varr.npy"
     with open(ftarr, 'rb') as rd:
         tarr = np.load(rd, allow_pickle=False)
     with open(fvarr, 'rb') as rd:
@@ -202,7 +200,7 @@ class Scan:
         return self.tarr, self.varr
 
     def sig2arr(self, out_arr):
-        with open(join(SCAN_FOLDER, "{}_0.npy".format(FILENAME)), "rb") as f:
+        with open(SCAN_FOLDER/"{}_0.npy".format(FILENAME), "rb") as f:
             SIGNAL_LENGTH = len(np.load(f)[:, 0])
         START = 0
         END = SIGNAL_LENGTH
@@ -213,15 +211,15 @@ class Scan:
         for y in range(self.SAMPLE_DIMENSIONS[0]):
             for x in range(self.SAMPLE_DIMENSIONS[1]):
                 file = "{0}_{1}.npy".format(FILENAME, int(out_arr[y, x]))
-                with open(join(SCAN_FOLDER, file), "rb") as npobj:
+                with open(SCAN_FOLDER/file, "rb") as npobj:
                     arr = np.load(npobj)
                     tarr[:, y, x] = arr[START:END, 0]
                     varr[:, y, x] = arr[START:END, 1]
         return tarr, varr
 
     def save_arr(self, output_folder=SCAN_FOLDER):
-        output_tarr = join(output_folder, "tarr.npy")
-        output_varr = join(output_folder, "varr.npy")
+        output_tarr = output_folder/"tarr.npy"
+        output_varr = output_folder/"varr.npy"
         self.tarr = self.tarr[:, 0, :]
         self.varr = self.varr[:, 0, :]
         with open(output_tarr, 'wb') as wr:

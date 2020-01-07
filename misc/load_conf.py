@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from os.path import join
+from pathlib import Path
 import re
 conversion_dict = {'title': 'str', 'min_step': 'float', 'foc': 'float',
                    'Cw': 'float', 'Cm': 'float', 'SAMPLE_START': 'int',
@@ -8,7 +8,8 @@ conversion_dict = {'title': 'str', 'min_step': 'float', 'foc': 'float',
 
 
 def load_conf(FOL):
-    path = join(FOL, 'conf.txt')
+    FOL = Path(FOL)
+    path = FOL/'conf.txt'
     f = open(path, 'r')
     conf = f.read().split('\n')
     f.close()

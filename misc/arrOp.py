@@ -3,7 +3,7 @@
 Array Operations
 """
 import numpy as np
-from path import Path
+from pathlib import Path
 import os.path as op
 import os
 from numba import vectorize
