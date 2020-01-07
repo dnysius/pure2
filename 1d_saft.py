@@ -2,15 +2,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FixedFormatter
-from path import Path
+from pathlib import Path
 from time import perf_counter_ns
 from misc.arrOp import load_arr, find_nearest, normalize
 from misc.load_conf import load_conf
 from scipy.signal import hilbert
 from numba import vectorize
 # Define paths
-DATA_FOLDER = "FLAT50cm-PURE"  # folder containing scan data
-directory_path: str = Path("C:/Users/indra/Documents/GitHub")
+DATA_FOLDER = "3FOC50cm"  # folder containing scan data
+directory_path: str = Path.cwd().parent
 # Import data
 ARR_FOL = directory_path/DATA_FOLDER
 tarr, varr = load_arr(ARR_FOL)  # load time and voltage arrays from the folder
@@ -101,7 +101,7 @@ def plt_saft():
     duration = perf_counter_ns()*1e-9-start_time
     print("Summing and plotting took {} s".format(duration))
     start_time = perf_counter_ns()*1e-9
-#    plt.savefig(ARR_FOL/"saft.png", dpi=400)  # save image
+    plt.savefig(ARR_FOL/"saft.png", dpi=400)  # save image
     duration = perf_counter_ns()*1e-9-start_time
     print("Saving the picture took {} s".format(duration))
     plt.show()

@@ -47,9 +47,10 @@ def step(command):
 
 
 def clear_scan_folder():
-    for f in listdir(SCAN_FOLDER):
-        if isfile(join(SCAN_FOLDER, f)) and (FILENAME in f):
-            remove(join(SCAN_FOLDER, f))
+    s = SCAN_FOLDER
+    for f in list(s.iterdir()):
+        if isfile(s/f) and (FILENAME in f):
+            remove(s/f)
 
 
 def load_arr(output_folder=SCAN_FOLDER):

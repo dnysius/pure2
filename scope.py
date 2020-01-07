@@ -5,9 +5,7 @@
 import sys
 import visa  # PyVisa info @ http://PyVisa.readthedocs.io/en/stable/
 import numpy as np
-from os import makedirs, getcwd
-from os.path import join, exists, dirname
-from path import Path
+from pathlib import Path
 global VISA_ADDRESS, VISA_PATH, FILENAME
 VISA_ADDRESS = 'USB0::0x0957::0x1799::MY52102738::INSTR'  # edit this
 VISA_PATH = Path('C:\\Windows\\System32\\visa32.dll')  # and this
@@ -157,7 +155,7 @@ class Scope:
         if self.TOTAL_BYTES_TO_XFER >= 400000:
             self.KsInfiniiVisionX.chunk_size = 20480
         if save:
-            filename = join(self.BASE_DIRECTORY, self.BASE_FILE_NAME + "{0}".format(ind) + ".npy")
+            filename = self.BASE_DIRECTORY/(self.BASE_FILE_NAME + "{0}".format(ind) + ".npy")
             with open(filename, 'wb') as filehandle: # wb means open for writing in binary; can overwrite
                 np.save(filehandle, np.insert(self.Wav_Data, 0, self.DataTime, axis=1))
         arr = np.insert(self.Wav_Data, 0, self.DataTime, axis=1)
@@ -169,6 +167,6 @@ class Scope:
 
 
 if __name__ == '__main__':
-    d = Path(getcwd()).parent
+    d = Path.cwd().parent
     s = Scope(d)
     s.grab(1)  #  mm
