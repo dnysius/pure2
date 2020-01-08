@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import hilbert
 from os import getcwd
-from os.path import join, dirname
-from misc.load_arr import load_arr, find_nearest
+from path import Path
+from arrOp import load_arr, find_nearest
 global graph_title
 FOLDER_NAME = "1D-FLAT5in"  # edit this
 graph_title = "FLAT3in"  # and this
-path_folder = join(dirname(getcwd()), "data", "1D SCANS", FOLDER_NAME)
+path_folder = Path(getcwd()).parent, "data", FOLDER_NAME
 Cw = 1498
 Cm = 6320
 

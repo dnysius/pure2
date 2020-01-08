@@ -2,13 +2,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FixedFormatter
-from path import Path
+from pathlib import Path
 from time import perf_counter_ns
 from misc.arrOp import load_arr, find_nearest, normalize
 from misc.load_conf import load_conf
+from scipy.signal import hilbert
 # Define paths
-DATA_FOLDER: str = "FLAT50CM-PURE-60um"  # folder containing scan data
-directory_path: str = Path("C:/Users/indra/Documents/GitHub")
+DATA_FOLDER = "3FOC50cm"  # folder containing scan data
+directory_path: str = Path.cwd().parent
 # Import data
 ARR_FOL = directory_path/DATA_FOLDER
 tarr, varr = load_arr(ARR_FOL)  # load time and voltage arrays from the folder
@@ -52,6 +53,7 @@ if __name__ == '__main__':
     vmax = np.max(view)
     b = normalize(view, float(vmin), float(vmax))  # normalize to (-1,1)
     b = b.reshape((dY, dX))
+    b = 20*np.log10(np.abs(hilbert(b, axis=0)))  # filter
     fig, ax1 = plt.subplots(1, 1, figsize=(11, 10))
     im0 = plt.imshow(b, aspect='auto', cmap='gray', interpolation='none', alpha=0)
     ax2 = ax1.twinx()  # second scale on same axes

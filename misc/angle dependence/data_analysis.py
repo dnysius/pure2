@@ -22,13 +22,13 @@ def indw2time(indw):
 
 
 class Signal:
-    def __init__(self, mypath, ftype='npy'):
+    def __init__(self, mypath):
         self.p = Path(mypath)
         self.title = self.p.basename()
         if self.p.isdir() is False:
-            mkdir(mypath)
+            self.p.mkdir()
         self.IMG_FOL = IMG_FOL  # Image folder path
-        self.ftype = ftype  # file extension
+        self.ftype = 'npy'  # file extension
         self.fnames = [f for f in self.p.listdir() if (self.p/f).isfile() and f[-3:] == self.ftype[-3:]]
         self.fnames.sort(key=natural_sort_key)  # sort file names
         self.angles = np.linspace(0, 30, len(self.fnames))  # determine angles
@@ -75,7 +75,7 @@ class Signal:
         self.plot_peak(i, start, width, x1, x2)
         cmd = input("//\t")
         if cmd == 's':
-            self.fig.savefig(join(self.folder, "{0}.png".format(i)))
+            self.fig.savefig(self.folder/"{0}.png".format(i))
             print('done saving')
         elif cmd == 'z' or cmd =='':
             sind = input("\nstart (default {0}): \t".format(start))
@@ -146,7 +146,7 @@ class Signal:
 #          ax.grid(True, axis='y', which="major", alpha=.5)
 #          ax.grid(True, axis='y', which="minor", alpha=.2, linestyle="--")
 #          ax.grid(True, axis='x', which="major", alpha=.2, linestyle="--")
-        plt.savefig(join(self.IMG_FOL, self.title+'.png'), dpi=300)
+        plt.savefig(self.IMG_FOL/(self.title+'.png'), dpi=300)
         plt.show(fig)
 
     def Iang_bscan(self, domain=(2600, 5200), vmin=0, vmax=1, y1=0, y2=-1):
@@ -204,7 +204,7 @@ class Signal:
 
 
 def graph_signals(trans, start, end):
-    with open(join(r"C:\Users\dionysius\Desktop\PURE\pure\obj", "{}_signal_data.pkl".format(trans)), "rb") as rd:
+    with open(Path("C:\Users\dionysius\Desktop\PURE\pure\obj")/("{}_signal_data.pkl".format(trans))), "rb") as rd:
         signal_data = np.load(rd)
         L = np.shape(signal_data)[0]
         ang = np.linspace(0, 30, L)

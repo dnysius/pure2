@@ -2,15 +2,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FixedFormatter
-from path import Path
+from pathlib import Path
+from os import getcwd
 from time import perf_counter_ns
 from misc.arrOp import load_arr, find_nearest, normalize
 from misc.load_conf import load_conf
+from scipy.signal import hilbert
 from numba import vectorize
 from tqdm import tqdm
 # Define paths
-DATA_FOLDER: str = "3FOC7in"  # folder containing scan data
-directory_path: str = Path("C:/Users/indra/Documents/GitHub")
+DATA_FOLDER = "3FOC50cm"  # folder containing scan data
+directory_path: str = Path.cwd().parent
 # Import data
 ARR_FOL = directory_path/DATA_FOLDER
 tarr, varr = load_arr(ARR_FOL)  # load time and voltage arrays from the folder
@@ -118,8 +120,8 @@ def load_td_arr():
     return td
 
 
-#td_arr = create_td_arr()
-td_arr = load_td_arr()
+#td_arr = create_td_arr()  # create delay
+td_arr = load_td_arr()  # load delay
 
 
 @vectorize(['float64(int64)'], target='parallel')
@@ -142,6 +144,7 @@ def plt_refr():
     p = refr(impix)
     p = normalize(p, float(np.min(p)), float(np.max(p)))  # normalize to (-1,1)
     POST = p.reshape((dY, dX), order='C')
+    POST = 20*np.log10(np.abs(hilbert(POST, axis=0)))  # filter
     fig, ax1 = plt.subplots(1, 1, figsize=(11, 10))
     im0 = plt.imshow(POST, aspect='auto', cmap='gray')
     ax2 = ax1.twinx()  # second scale on same axes

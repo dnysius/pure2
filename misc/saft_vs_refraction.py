@@ -1,7 +1,5 @@
 import numpy as np
-import threading
-from os import getcwd
-from os.path import join, dirname
+from pathlib import Path
 from scipy.signal import hilbert
 from time import perf_counter_ns
 import pickle
@@ -9,7 +7,7 @@ import matplotlib.pyplot as plt
 global min_step, Cw, Cm, a, ARR_FOL, d1
 global transducer_positions, lenT, T, V, L, IMAGE, trans_index, foc
 FOLDER_NAME = "1D-3FOC50cm-60um"
-directory_path = "C:\\Users\\indra\\Documents\\GitHub"
+directory_path = Path.cwd().parent
 min_step = 6e-4
 SAMPLE_START: int = 31500
 SAMPLE_END: int = 33000
@@ -19,13 +17,13 @@ Cw = 1498  # speed of sound in Water
 Cm = 6320  # speed of sound in Metal
 a = Cm/Cw  # ratio between two speeds of sound
 foc = 0.0762  # metres
-ARR_FOL = join(directory_path, FOLDER_NAME)
+ARR_FOL = directory_path/FOLDER_NAME
 fix = 150
 
 
 def load_arr(FILENAME, output_folder=ARR_FOL):
-    ftarr = join(output_folder, "tarr.pkl")
-    fvarr = join(output_folder, FILENAME)
+    ftarr = output_folder/"tarr.pkl"
+    fvarr = output_folder/FILENAME
     with open(ftarr, 'rb') as rd:
         tarr = pickle.load(rd)
         tarr = tarr[:, 0, :]
