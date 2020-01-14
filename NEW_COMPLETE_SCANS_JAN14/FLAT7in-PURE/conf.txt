@@ -1,0 +1,11 @@
+title:{FLAT PURE TRANSDUCER, 7IN Sample Depth}
+min_step:{4e-4}
+foc:{0.0762}
+Cw:{1498}
+Cm:{6320}
+SAMPLE_START:{23000}
+SAMPLE_END:{25500}
+imgL:{0}
+imgR:{250}
+ymin:{0}
+ymax:{0}

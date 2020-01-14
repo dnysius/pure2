@@ -8,7 +8,7 @@ from misc.arrOp import load_arr, find_nearest, normalize
 from misc.load_conf import load_conf
 from scipy.signal import hilbert
 # Define paths
-DATA_FOLDER = "3FOC50cm"  # folder containing scan data
+DATA_FOLDER = "FLAT7in-PURE2"  # folder containing scan data
 directory_path: str = Path.cwd().parent
 # Import data
 ARR_FOL = directory_path/DATA_FOLDER
