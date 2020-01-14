@@ -47,8 +47,9 @@ def step(command):
 def clear_scan_folder():
     s = SCAN_FOLDER
     for f in list(s.iterdir()):
-        if (s/f).is_file() and (FILENAME in str(f)):
-            (s/f).unlink(missing_ok=True)
+        p = s/f
+        if p.exists() and p.is_file() and (FILENAME in str(f)):
+            p.unlink()
 
 
 def load_arr(output_folder=SCAN_FOLDER):
