@@ -8,7 +8,7 @@ from misc.arrOp import load_arr, find_nearest, normalize
 from misc.load_conf import load_conf
 from scipy.signal import hilbert
 # Define paths
-DATA_FOLDER = "FLAT7in-PURE2"  # folder containing scan data
+DATA_FOLDER = "3LENS7in-PURE"  # folder containing scan data
 directory_path: str = Path.cwd().parent
 # Import data
 ARR_FOL = directory_path/DATA_FOLDER
@@ -80,4 +80,4 @@ if __name__ == '__main__':
     plt.savefig(ARR_FOL/'b-scan.png', dpi=400)
     duration = perf_counter_ns()*1e-9-start_time
     print("Saving the picture took {} s".format(duration))
-    plt.show(fig)
+    plt.show()
