@@ -10,7 +10,7 @@ from scipy.signal import hilbert
 from numba import vectorize
 from tqdm import tqdm
 # Define paths
-DATA_FOLDER = "3LENS7in-PURE2"  # folder containing scan data
+DATA_FOLDER = "FLAT50cm-PURE"  # folder containing scan data
 directory_path: str = Path.cwd().parent
 # Import data
 ARR_FOL = directory_path/DATA_FOLDER
