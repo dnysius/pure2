@@ -53,7 +53,8 @@ if __name__ == '__main__':
     vmax = np.max(view)
     b = normalize(view, float(vmin), float(vmax))  # normalize to (-1,1)
     b = b.reshape((dY, dX))
-    b = 20*np.log10(np.abs(hilbert(b, axis=0)))  # filter
+    h = np.abs(hilbert(b, axis=0))
+    b = 20*np.log10(h/np.max(h.flatten()))  # filter
     fig, ax1 = plt.subplots(1, 1, figsize=(11, 10))
     im0 = plt.imshow(b, aspect='auto', cmap='gray', interpolation='none', alpha=0)
     ax2 = ax1.twinx()  # second scale on same axes

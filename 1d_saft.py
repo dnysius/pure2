@@ -76,7 +76,8 @@ def plt_saft():
     p = saft(impix)
     p = normalize(p, float(np.min(p)), float(np.max(p)))  # normalize to (-1,1)
     POST = p.reshape((dY, dX), order='C')
-    POST = 20*np.log10(np.abs(hilbert(POST, axis=0)))  # filter
+    h = np.abs(hilbert(POST, axis=0))
+    POST = 20*np.log10(h/np.max(h.flatten()))  # filter
     # PLOTTING
     fig, ax1 = plt.subplots(1, 1, figsize=(11, 10))
     im0 = plt.imshow(POST, aspect='auto', cmap='gray')
