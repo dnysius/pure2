@@ -3,12 +3,12 @@
 # Edit the VISA library path (if not using Windows)
 # Grab oscilloscope data using s.grab()
 import sys
-import visa  # PyVisa info @ http://PyVisa.readthedocs.io/en/stable/
+import pyvisa  # PyVisa info @ http://PyVisa.readthedocs.io/en/stable/
 import numpy as np
 from pathlib import Path
 global VISA_ADDRESS, VISA_PATH, FILENAME
 VISA_ADDRESS = 'USB0::0x0957::0x1799::MY52102738::INSTR'  # edit this
-VISA_PATH = Path('C:\\Windows\\System32\\visa32.dll')  # and this
+# VISA_PATH = Path('C:\\Windows\\System32\\visa32.dll')  # and this
 FILENAME = "scope"  # and this
 
 
@@ -22,9 +22,7 @@ class Scope:
         if self.BASE_DIRECTORY.exists is False:
             self.BASE_DIRECTORY.mkdir(parents=True)
         try:
-            self.rm = visa.ResourceManager(VISA_PATH)
-        except:
-            self.rm = visa.ResourceManager()
+            self.rm = pyvisa.ResourceManager('@py')
         try:
             self.KsInfiniiVisionX = self.rm.open_resource(self.SCOPE_VISA_ADDRESS)
         except Exception:
@@ -169,4 +167,5 @@ class Scope:
 if __name__ == '__main__':
     d = Path.cwd().parent
     s = Scope(d)
-    s.grab(1)  #  mm
+    s.grab(1024)  #  mm
+    s.close()

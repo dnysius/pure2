@@ -58,7 +58,9 @@ def pkl_to_csv(path):
 def pkl_to_npy():
     data_path = Path("C:/Users/indra/Documents/GitHub")
     subfolders = [d for d in os.listdir(data_path)
-                  if op.isdir(data_path/d) and d != "pure2" and d!="LENS50cm" and d!="Old Pure Files"]
+                  if op.isdir(data_path/d) and
+                  d != "pure2" and d!="LENS50cm"
+                  and d!="Old Pure Files" and d != "pure-writeup"]
     for folder in subfolders:
         subp = data_path/folder
         if (subp/"tarr.pkl").exists() and (subp/"varr.pkl").exists():
