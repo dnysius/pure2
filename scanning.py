@@ -7,7 +7,7 @@ from time import sleep
 import serial.tools.list_ports
 global TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT
 global FILENAME, SCAN_FOLDER, min_step, arduino
-DATA_FOLDER = "FLAT7in-PURE2"
+DATA_FOLDER = "FLAT50cm-PURE_ALLHOLE"
 min_step = 4e-4
 FILENAME = "scope"
 SCAN_FOLDER = Path.cwd().parent/DATA_FOLDER
@@ -231,7 +231,7 @@ class Scan:
 
 
 if __name__ == '__main__':
-    foc = Scan(DIMENSIONS=(0, 0.1), START_POS="bottom left")
+    foc = Scan(DIMENSIONS=(0, 0.2), START_POS="bottom right")
 
 if arduino is not None:
     arduino.close()
