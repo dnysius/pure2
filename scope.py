@@ -8,7 +8,7 @@ import numpy as np
 from pathlib import Path
 global VISA_ADDRESS, VISA_PATH, FILENAME
 VISA_ADDRESS = 'USB0::0x0957::0x1799::MY52102738::INSTR'  # edit this
-# VISA_PATH = Path('C:\\Windows\\System32\\visa32.dll')  # and this
+VISA_PATH = Path('C:\\Windows\\System32\\visa32.dll')  # and this
 FILENAME = "scope"  # and this
 
 
@@ -21,8 +21,8 @@ class Scope:
         self.BASE_DIRECTORY = Path(directory)
         if self.BASE_DIRECTORY.exists is False:
             self.BASE_DIRECTORY.mkdir(parents=True)
-        try:
-            self.rm = pyvisa.ResourceManager('@py')
+
+        self.rm = pyvisa.ResourceManager(VISA_PATH)
         try:
             self.KsInfiniiVisionX = self.rm.open_resource(self.SCOPE_VISA_ADDRESS)
         except Exception:

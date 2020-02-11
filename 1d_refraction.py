@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rc
 from matplotlib.ticker import FixedFormatter
 from pathlib import Path
 from time import perf_counter_ns
@@ -9,8 +10,9 @@ from misc.load_conf import load_conf
 from scipy.signal import hilbert
 from numba import vectorize
 from tqdm import tqdm
+rc('font',**{'family':'serif','sans-serif':['Times New Roman'],'size':12})
 # Define paths
-DATA_FOLDER = "FLAT50cm-PURE"  # folder containing scan data
+DATA_FOLDER = "3LENS50cm-PURE"  # folder containing scan data
 directory_path: str = Path.cwd().parent
 # Import data
 ARR_FOL = directory_path/DATA_FOLDER
@@ -148,22 +150,22 @@ def plt_refr():
     fig, ax1 = plt.subplots(1, 1, figsize=(11, 10))
     im0 = plt.imshow(POST, aspect='auto', cmap='gray')
     ax2 = ax1.twinx()  # second scale on same axes
-    ax1.set_xlabel("lateral distance (cm)")
-    ax1.set_ylabel("index")
+    ax1.set_xlabel("Lateral distance [cm]")
+    ax1.set_ylabel("Timeseries index")
     ax1.set_xticklabels(np.round(ax1.get_xticks()*100*min_step, 4))
     ax1.set_yticklabels((ax1.get_yticks()).astype(int))
     im1 = ax2.imshow(POST, aspect='auto', cmap='gray',
                      interpolation='none', alpha=1)
     seg_x = (imgR+imgL)//2 - imgL  # line segment x position
     ax2.axvline(x=seg_x, ymin=(1 - ymin/dY),
-                ymax=(1 - ymax/dY), c='red', lw=5,
+                ymax=(1 - ymax/dY), c='red', lw=3,
                 alpha=.7, label='{} m'.format(np.round(Cm*tstep*abs(ymin-ymax)/2, 7)))
-    colorbar = fig.colorbar(im1, orientation='vertical', pad=0.1, fraction=.05, aspect=50)
-    colorbar.set_label('relative signal strength')
+    colorbar = fig.colorbar(im1, orientation='vertical', pad=0.12, fraction=.05, aspect=50)
+    colorbar.set_label('dB')
     plt.title("{} refraction".format(title))
     y_formatter = FixedFormatter(np.round((ax2.get_yticks()+d2_start)*100*tstep*Cw/2, 2))
     ax2.yaxis.set_major_formatter(y_formatter)
-    ax2.set_ylabel("axial distance (cm)")
+    ax2.set_ylabel("Axial distance [cm]")
     plt.legend(loc='upper right', framealpha=1)
     duration = perf_counter_ns()*1e-9-start_time
     start_time = perf_counter_ns()*1e-9
