@@ -10,7 +10,7 @@ from misc.load_conf import load_conf
 from scipy.signal import hilbert
 rc('font',**{'family':'serif','sans-serif':['Times New Roman'],'size':12})
 # Define paths
-DATA_FOLDER = "FLAT50cm-PURE-ALLHOLES"  # folder containing scan data
+DATA_FOLDER = "1D-4FOC4in-bone-750um"  # folder containing scan data
 directory_path: str = Path.cwd().parent
 # Import data
 ARR_FOL = directory_path/DATA_FOLDER
