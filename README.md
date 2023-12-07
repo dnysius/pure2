@@ -1,5 +1,5 @@
 # pure
-A collaborative project with pure technologies.
+Ultrasonic image reconstruction algorithm implementation and empirical testing.
 
 ### Accessing the data
 The folders containing the data are stored in /pure2/data.zip. Extract this folder and place the folders to the repository's parent directory. For example, if the repo is located in .../GitHub/pure2/, move the folders to /GitHub/.
